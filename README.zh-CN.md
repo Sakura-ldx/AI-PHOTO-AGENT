@@ -106,7 +106,7 @@ Ctrl+Z 撤销。安装、真机验证记录和限制见
 | `AI_PHOTO_AGENT_CODEX_MODEL` | `gpt-5.6-sol` | `codex` Provider 使用的模型 |
 | `AI_PHOTO_AGENT_CODEX_EXECUTABLE` | 从 `PATH` 查找 | 显式指定 `codex` 可执行文件 |
 | `AI_PHOTO_AGENT_CODEX_TIMEOUT_SECONDS` | `600` | Codex CLI 超时 |
-| `AI_PHOTO_AGENT_DATA_DIR` | 项目 `data/` | 私有会话与生成资产目录 |
+| `AI_PHOTO_AGENT_DATA_DIR` | 仓库根目录 | 存储根目录；私有会话在 `<root>/data/`，上传在 `<root>/uploads/` |
 | `AI_PHOTO_AGENT_LIGHTROOM_ROOT` | 自动探测 | Lightroom 用户目录 |
 | `AI_PHOTO_AGENT_MAX_UPLOAD_BYTES` | `268435456`（256 MiB） | 上传字节上限 |
 | `AI_PHOTO_AGENT_MAX_IMAGE_PIXELS` | `50000000` | 单图解码像素上限 |

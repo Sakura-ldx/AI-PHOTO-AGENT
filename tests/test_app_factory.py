@@ -235,6 +235,22 @@ def test_settings_defaults_overrides_and_blank_data_directory(monkeypatch, tmp_p
     assert load_settings(default_root).data_root == default_root.resolve()
 
 
+def test_data_dir_is_a_storage_root_not_the_private_data_folder(
+    monkeypatch, tmp_path
+) -> None:
+    # AI_PHOTO_AGENT_DATA_DIR is the storage root. FileStorage adds the
+    # private "data" segment itself; setting the env var to ".../data" would
+    # otherwise produce ".../data/data/sessions".
+    root = tmp_path / "store"
+    monkeypatch.setenv("AI_PHOTO_AGENT_DATA_DIR", str(root))
+
+    storage = FileStorage(load_settings(tmp_path / "fallback").data_root)
+
+    assert storage.root == root.resolve()
+    assert storage.sessions_dir == (root / "data" / "sessions").resolve()
+    assert storage.uploads_dir == (root / "uploads").resolve()
+
+
 def test_path_settings_expand_environment_variables(monkeypatch, tmp_path) -> None:
     for name in (
         "AI_PHOTO_AGENT_DATA_DIR",

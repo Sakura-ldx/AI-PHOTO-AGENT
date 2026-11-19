@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 from typing import Any
 
 import httpx
@@ -11,6 +12,7 @@ from app.adapters.analysis import MockAnalysisProvider
 from app.adapters.deepseek_analysis import (
     MAX_OUTPUT_TOKENS,
     DeepSeekAnalysisProvider,
+    _style_diversity_issue,
 )
 from app.adapters.vision_models import StructuredPhotoAnalysis
 from app.errors import ProviderOutputError, ProviderServiceError, ProviderTimeoutError
@@ -287,3 +289,72 @@ def test_deepseek_provider_reports_truncation_after_the_compact_retry(tmp_path) 
         make_provider(client).analyze(image_path, make_metadata())
     assert len(client.calls) == 2
     assert client.calls[1]["json"]["max_tokens"] == MAX_OUTPUT_TOKENS
+
+
+def _with_temperatures(analysis: ImageAnalysis, values: list[int]) -> ImageAnalysis:
+    clone = analysis.model_copy(deep=True)
+    for style, value in zip(clone.recommended_styles, values):
+        style.parameters.temperature = value
+    return clone
+
+
+def test_style_diversity_check_accepts_the_mock_recipe() -> None:
+    analysis = MockAnalysisProvider().analyze(
+        Path("unused.png"),
+        make_metadata(),
+    )
+
+    assert _style_diversity_issue(analysis) is None
+
+
+def test_style_diversity_check_detects_warm_cool_neutral_triad() -> None:
+    analysis = MockAnalysisProvider().analyze(
+        Path("unused.png"),
+        make_metadata(),
+    )
+    triad = _with_temperatures(analysis, [18, 0, -18])
+
+    assert "三分法" in (_style_diversity_issue(triad) or "")
+
+
+def test_deepseek_provider_retries_a_repetitive_triad_once(tmp_path) -> None:
+    image_path = tmp_path / "photo.png"
+    make_image(image_path)
+    metadata = make_metadata()
+    expected = MockAnalysisProvider().analyze(image_path, metadata)
+    triad = _with_temperatures(expected, [18, 0, -18])
+    client = FakeClient(
+        responses=[
+            make_response(to_structured(triad)),
+            make_response(to_structured(expected)),
+        ]
+    )
+
+    actual = make_provider(client).analyze(image_path, metadata)
+
+    assert actual == expected
+    assert len(client.calls) == 2
+    assert client.calls[0]["json"]["temperature"] == 0.2
+    assert client.calls[1]["json"]["temperature"] == 0.55
+    retry_prompt = client.calls[1]["json"]["messages"][1]["content"][0]["text"]
+    assert "过于同质" in retry_prompt
+    assert "中性/偏暖/偏冷" in retry_prompt
+
+
+def test_deepseek_provider_accepts_the_second_triad_instead_of_looping(tmp_path) -> None:
+    image_path = tmp_path / "photo.png"
+    make_image(image_path)
+    metadata = make_metadata()
+    expected = MockAnalysisProvider().analyze(image_path, metadata)
+    triad = _with_temperatures(expected, [18, 0, -18])
+    client = FakeClient(
+        responses=[
+            make_response(to_structured(triad)),
+            make_response(to_structured(triad)),
+        ]
+    )
+
+    actual = make_provider(client).analyze(image_path, metadata)
+
+    assert actual == triad
+    assert len(client.calls) == 2

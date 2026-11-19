@@ -56,6 +56,38 @@ def _retry_delay_seconds(response: Any, attempt: int) -> float:
     return _backoff_seconds(attempt)
 
 
+def _style_diversity_issue(analysis: ImageAnalysis) -> str | None:
+    """Return a short reason when the three styles are effectively the same recipe.
+
+    The prompt already asks for three distinct editing intents, but low
+    temperature sampling often collapses back to the same warm/cool/neutral
+    triad. A targeted retry is cheaper than returning three near-duplicates.
+    """
+
+    styles = analysis.recommended_styles
+    if len(styles) != 3:
+        return None
+    params = [style.parameters for style in styles]
+    temperatures = [item.temperature for item in params]
+    exposures = [item.exposure for item in params]
+    contrasts = [item.contrast for item in params]
+    color = [item.saturation + item.vibrance for item in params]
+
+    if (
+        min(temperatures) <= -7
+        and max(temperatures) >= 7
+        and any(abs(value) <= 4 for value in temperatures)
+    ):
+        return "默认的偏暖/偏冷/中性三分法"
+    if (
+        max(exposures) - min(exposures) < 0.15
+        and max(contrasts) - min(contrasts) < 8
+        and max(color) - min(color) < 12
+    ):
+        return "参数几乎相同，只做了小幅调整"
+    return None
+
+
 class DeepSeekAnalysisProvider(AnalysisProvider):
     """Vision analysis through DeepSeek's OpenAI-compatible chat API.
 
@@ -98,17 +130,20 @@ class DeepSeekAnalysisProvider(AnalysisProvider):
         started_at = perf_counter()
         last_output_error: Exception | None = None
         retry_compact = False
+        retry_diversity = False
 
         # A reasoning model can occasionally emit a truncated or imperfect JSON
         # object. Retry the structured-output request once with an explicit
-        # reminder instead of failing the whole upload.
-        for output_attempt in range(2):
+        # reminder instead of failing the whole upload. A successful but
+        # repetitive set of styles gets one additional targeted retry.
+        for output_attempt in range(3):
             payload = self._build_payload(
                 metadata=metadata,
                 image_data_url=prepared.data_url,
                 measurements_block=measurements_block,
-                strict=output_attempt > 0,
+                strict=output_attempt > 0 and not retry_diversity,
                 compact=retry_compact,
+                diversity_repair=retry_diversity,
             )
             response = self._post_with_retries(payload)
             elapsed_ms = round((perf_counter() - started_at) * 1000)
@@ -177,6 +212,19 @@ class DeepSeekAnalysisProvider(AnalysisProvider):
                     continue
                 raise last_output_error from exc
 
+            diversity_issue = _style_diversity_issue(analysis)
+            if diversity_issue and not retry_diversity:
+                LOGGER.info(
+                    "DeepSeek photo analysis styles are too similar "
+                    "model=%s reason=%s elapsed_ms=%s — retrying once",
+                    self.model,
+                    diversity_issue,
+                    elapsed_ms,
+                )
+                retry_diversity = True
+                retry_compact = False
+                continue
+
             usage = data.get("usage") if isinstance(data, dict) else None
             LOGGER.info(
                 "DeepSeek photo analysis completed model=%s elapsed_ms=%s "
@@ -202,6 +250,7 @@ class DeepSeekAnalysisProvider(AnalysisProvider):
         measurements_block: str = "",
         strict: bool,
         compact: bool = False,
+        diversity_repair: bool = False,
     ) -> dict[str, Any]:
         return {
             "model": self.model,
@@ -217,6 +266,7 @@ class DeepSeekAnalysisProvider(AnalysisProvider):
                                 measurements_block=measurements_block,
                                 strict=strict,
                                 compact=compact,
+                                diversity_repair=diversity_repair,
                             ),
                         },
                         {
@@ -227,7 +277,7 @@ class DeepSeekAnalysisProvider(AnalysisProvider):
                 },
             ],
             "max_tokens": MAX_OUTPUT_TOKENS,
-            "temperature": 0.2,
+            "temperature": 0.55 if diversity_repair else 0.2,
             "response_format": JSON_RESPONSE_FORMAT,
             "stream": False,
         }
@@ -280,6 +330,7 @@ def _user_prompt(
     measurements_block: str = "",
     strict: bool = False,
     compact: bool = False,
+    diversity_repair: bool = False,
 ) -> str:
     metadata_payload = json.dumps(
         {
@@ -317,6 +368,14 @@ def _user_prompt(
             "每套风格的 description / best_fit_reason / expected_visual_impact / "
             "rationale / crop_suggestion.rationale 各不超过 40 字。"
             "数值字段不得省略，必须输出完整、可解析的 JSON。"
+        )
+    if diversity_repair:
+        prompt += (
+            "\n\n上一次的三套风格过于同质。请重新设计三套编辑意图明显不同的方案："
+            "不要使用“中性/偏暖/偏冷”三分法，也不要把白平衡冷暖当作主要区分；"
+            "至少一套以黑白、低调/高调、低饱和、强对比质感、柔焦空气感或裁切等"
+            "非白平衡维度为主；三套在曝光意图、对比与通透、饱和度与色彩策略中"
+            "至少两个维度明显不同，不要只做小幅数值移动。"
         )
     return prompt
 

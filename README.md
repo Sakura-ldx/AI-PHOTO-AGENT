@@ -124,7 +124,7 @@ are in [the Lightroom guide (Chinese)](docs/LIGHTROOM_PLUGIN.zh-CN.md).
 | `AI_PHOTO_AGENT_CODEX_MODEL` | `gpt-5.6-sol` | Model for the `codex` provider |
 | `AI_PHOTO_AGENT_CODEX_EXECUTABLE` | from `PATH` | Explicit `codex` executable |
 | `AI_PHOTO_AGENT_CODEX_TIMEOUT_SECONDS` | `600` | Codex CLI timeout |
-| `AI_PHOTO_AGENT_DATA_DIR` | project `data/` | Private sessions and generated assets |
+| `AI_PHOTO_AGENT_DATA_DIR` | repository root | Storage root; private state lives under `<root>/data/` and uploads under `<root>/uploads/` |
 | `AI_PHOTO_AGENT_LIGHTROOM_ROOT` | auto-detect | Lightroom user directory |
 | `AI_PHOTO_AGENT_MAX_UPLOAD_BYTES` | `268435456` (256 MiB) | Upload byte limit |
 | `AI_PHOTO_AGENT_MAX_IMAGE_PIXELS` | `50000000` | Decoded pixel limit per image |
