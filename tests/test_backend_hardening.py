@@ -202,6 +202,18 @@ def test_cross_origin_writes_are_rejected(tmp_path: Path) -> None:
     assert blocked.status_code == 403
     assert blocked.json()["detail"] == "Cross-origin requests are not allowed."
 
+    # A hostname that merely starts with "127." is not a loopback address.
+    for malicious_origin in (
+        "http://127.evil.example",
+        "http://127.0.0.1.evil.example",
+    ):
+        blocked_prefix = client.post(
+            "/api/photos",
+            headers={"Origin": malicious_origin},
+            files={"file": (filename, content, content_type)},
+        )
+        assert blocked_prefix.status_code == 403
+
     allowed = client.post(
         "/api/photos",
         headers={"Origin": "http://127.0.0.1:8000"},

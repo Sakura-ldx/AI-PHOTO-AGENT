@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ipaddress
 import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -233,7 +234,11 @@ def _is_loopback_origin(origin: str) -> bool:
         return False
     if hostname in _LOOPBACK_HOSTNAMES:
         return True
-    return hostname.startswith("127.")
+    try:
+        return ipaddress.ip_address(hostname).is_loopback
+    except ValueError:
+        # A DNS name such as ``127.evil.example`` is not a loopback address.
+        return False
 
 
 def _register_error_handlers(application: FastAPI) -> None:
