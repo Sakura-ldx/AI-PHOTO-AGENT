@@ -11,6 +11,8 @@
 | 依赖 | 当前版本 | 作用 |
 | --- | --- | --- |
 | FastAPI | 0.115.6 | HTTP API、依赖注入、OpenAPI |
+| Starlette | 0.41.3 | ASGI 工具与 TestClient 兼容层 |
+| anyio | 4.14.1 | Starlette TestClient 的异步运行层 |
 | Uvicorn | 0.34.0 | ASGI 本地服务器 |
 | python-multipart | 0.0.20 | JPEG/PNG 表单上传 |
 | Pillow | 11.1.0 | 图片校验、元数据读取和近似预览 |
