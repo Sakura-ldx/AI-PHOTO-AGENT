@@ -146,6 +146,10 @@ $env:AI_PHOTO_AGENT_ANALYSIS_PROVIDER = "mock"
 - Write requests that carry a non-loopback `Origin` are rejected with **403**; requests
   without an `Origin` header (Lightroom Lua, CLI tools, `TestClient`) are allowed. This is
   a minimal CSRF guard, not authentication.
+- `Host` headers are restricted to `127.0.0.1`, `localhost`, `[::1]` and the test host;
+  other names get **400**. This blocks DNS-rebinding requests from a browser page.
+- Every response sets `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`,
+  `Referrer-Policy: no-referrer` and `Cross-Origin-Resource-Policy: same-origin`.
 - A declared `Content-Length` above `max_upload_bytes + 1 MiB` returns **413 before
   multipart parsing**; the chunked read limit still applies afterwards.
 - `run_app.py` publishes the actual `--host/--port` as `AI_PHOTO_AGENT_SERVER_URL` before

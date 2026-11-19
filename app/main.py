@@ -9,6 +9,7 @@ from urllib.parse import quote, urlsplit
 from fastapi import FastAPI, Request, status
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from app.adapters.analysis import AnalysisProvider, MockAnalysisProvider
 from app.adapters.factory import build_analysis_providers
@@ -48,6 +49,16 @@ STATIC_DIR = BASE_DIR / "app" / "static"
 UPLOAD_ENVELOPE_BYTES = 1024 * 1024
 UNSAFE_METHODS = frozenset({"POST", "PUT", "PATCH", "DELETE"})
 _LOOPBACK_HOSTNAMES = frozenset({"127.0.0.1", "localhost", "::1"})
+# Host headers a local browser may legitimately send.  TrustedHostMiddleware
+# rejects DNS names that merely resolve to a loopback address, which closes the
+# DNS-rebinding hole left open by an Origin-only check.
+TRUSTED_HOSTS = ("127.0.0.1", "localhost", "[::1]", "testserver")
+_SECURITY_HEADERS = {
+    "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "DENY",
+    "Referrer-Policy": "no-referrer",
+    "Cross-Origin-Resource-Policy": "same-origin",
+}
 
 
 def create_app(
@@ -131,6 +142,18 @@ def create_app(
         lifespan=lifespan,
     )
     application.state.services = services
+    application.add_middleware(
+        TrustedHostMiddleware,
+        allowed_hosts=list(TRUSTED_HOSTS),
+        www_redirect=False,
+    )
+
+    @application.middleware("http")
+    async def add_security_headers(request: Request, call_next):
+        response = await call_next(request)
+        for name, value in _SECURITY_HEADERS.items():
+            response.headers.setdefault(name, value)
+        return response
 
     @application.middleware("http")
     async def reject_oversized_upload(request: Request, call_next):
@@ -144,7 +167,7 @@ def create_app(
                 limit = resolved_storage.max_upload_bytes
                 if length > limit + UPLOAD_ENVELOPE_BYTES:
                     return JSONResponse(
-                        status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                        status_code=status.HTTP_413_CONTENT_TOO_LARGE,
                         content={
                             "detail": f"Uploaded file exceeds the {limit} byte limit."
                         },
@@ -173,18 +196,7 @@ def create_app(
             and request.url.path.lower().endswith(".xmp")
         ):
             filename = Path(request.url.path).name
-            ascii_name = (
-                "".join(
-                    character
-                    for character in filename
-                    if character.isascii() and character not in {'"', "\\"}
-                )
-                or "preset.xmp"
-            )
-            response.headers["Content-Disposition"] = (
-                f'attachment; filename="{ascii_name}"; '
-                f"filename*=UTF-8''{quote(filename)}"
-            )
+            response.headers["Content-Disposition"] = _xmp_content_disposition(filename)
         return response
 
     _register_error_handlers(application)
@@ -218,6 +230,25 @@ def create_app(
     return application
 
 
+def _xmp_content_disposition(filename: str) -> str:
+    """Build a header-safe attachment filename for an exported preset."""
+
+    ascii_name = (
+        "".join(
+            character
+            for character in filename
+            if character.isascii()
+            and character.isprintable()
+            and character not in {'"', "\\"}
+        )
+        or "preset.xmp"
+    )
+    return (
+        f'attachment; filename="{ascii_name}"; '
+        f"filename*=UTF-8''{quote(filename)}"
+    )
+
+
 def _is_loopback_origin(origin: str) -> bool:
     """True when an ``Origin`` header points at this machine.
 
@@ -247,7 +278,7 @@ def _register_error_handlers(application: FastAPI) -> None:
     _register_error_handler(
         application,
         UploadTooLargeError,
-        status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+        status.HTTP_413_CONTENT_TOO_LARGE,
     )
     _register_error_handler(application, WorkflowConflictError, status.HTTP_409_CONFLICT)
 

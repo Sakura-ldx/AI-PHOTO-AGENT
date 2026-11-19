@@ -13,6 +13,10 @@ AI Photo Agent is a local-first application:
 - The HTTP service binds to `127.0.0.1` by default and has no built-in
   authentication. Do not expose it to a LAN or the public internet. If you change
   `--host`, put an authenticating reverse proxy in front of it.
+- `Host` headers are restricted to loopback names (`127.0.0.1`, `localhost`,
+  `[::1]`); other names receive `400`. This is a DNS-rebinding defense, not
+  authentication. A reverse proxy must preserve an allowed `Host` header or the
+  service will reject the request.
 - Uploaded photos, analysis sessions, generated assets and Lightroom bridge files
   live under ignored directories (`data/`, `uploads/`, `generated/`, `exports/`).
   They are not part of the repository.

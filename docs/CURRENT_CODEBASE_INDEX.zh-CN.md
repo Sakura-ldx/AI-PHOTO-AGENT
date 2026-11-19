@@ -10,15 +10,15 @@
 
 | 依赖 | 当前版本 | 作用 |
 | --- | --- | --- |
-| FastAPI | 0.115.6 | HTTP API、依赖注入、OpenAPI |
-| Starlette | 0.41.3 | ASGI 工具与 TestClient 兼容层 |
-| anyio | 4.14.1 | Starlette TestClient 的异步运行层 |
-| Uvicorn | 0.34.0 | ASGI 本地服务器 |
-| python-multipart | 0.0.20 | JPEG/PNG 表单上传 |
-| Pillow | 11.1.0 | 图片校验、元数据读取和近似预览 |
-| Pydantic | 2.10.5 | 领域模型、请求响应模型和 Provider 输出校验 |
+| FastAPI | 0.165.0 | HTTP API、依赖注入、OpenAPI |
+| Starlette | 1.10.0 | ASGI 工具与 TestClient 兼容层 |
+| anyio | 4.16.0 | Starlette TestClient 的异步运行层 |
+| Uvicorn | 0.54.0 | ASGI 本地服务器 |
+| python-multipart | 0.0.34 | JPEG/PNG 表单上传 |
+| Pillow | 13.0.0 | 图片校验、元数据读取和近似预览 |
+| Pydantic | 2.14.4 | 领域模型、请求响应模型和 Provider 输出校验 |
 | OpenAI | 2.46.0 | Responses API、图片输入和 Pydantic 结构化输出 |
-| pytest/httpx | 8.3.4/0.28.1 | 服务、API、并发和故障注入测试 |
+| pytest/httpx/httpx2 | 9.0.3/0.28.1/2.16.2 | 服务、API、并发和故障注入测试 |
 
 ### 完整代码文件清单
 
@@ -193,7 +193,7 @@ Uvicorn 的默认运行入口，执行 `app = create_app()`。把默认实例放
 5. 注册照片、学习、知识库与 Lightroom 路由。
 6. 仅公开挂载 `generated/previews`、`generated/summaries`（学习总结推荐强度预览）和 `exports`；原图、参考图和 JSON 不做整目录静态暴露。更具体的 `/generated/summaries` 挂载先于 `/generated`，因此学习总结预览与前缀预览共享同一公开 URL 空间。
 7. 注册领域异常到 HTTP 状态码的统一映射。
-8. 注册请求守卫中间件：非安全方法（POST/PUT/PATCH/DELETE）声明的 `Content-Length` 超过 `storage.max_upload_bytes + 1 MiB` 时，在 multipart 解析前直接返回 413；携带非 loopback `Origin` 的写请求返回 403（无 `Origin` 的本地工具/插件调用不受影响）。
+8. 注册请求守卫与安全响应头：非安全方法（POST/PUT/PATCH/DELETE）声明的 `Content-Length` 超过 `storage.max_upload_bytes + 1 MiB` 时，在 multipart 解析前直接返回 413；携带非 loopback `Origin` 的写请求返回 403（无 `Origin` 的本地工具/插件调用不受影响）；`Host` 只接受 loopback 名称与测试主机，其他域名返回 400；所有响应补充 `X-Content-Type-Options`、`X-Frame-Options`、`Referrer-Policy` 和 `Cross-Origin-Resource-Policy`。
 9. FastAPI lifespan 在应用退出时调用 `AnalysisTaskRegistry.shutdown()`，取消并回收后台分析线程。
 
 错误映射为：无效输入与未知分析 Provider 400、资源不存在 404（含已回收的分析任务）、跨站写请求 403、工作流冲突 409、上传超限 413、Provider 上游失败 502、Provider 超时 504；损坏数据、Provider 输出契约错误和存储写入错误返回不泄露本机路径的通用 500。

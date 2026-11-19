@@ -93,7 +93,7 @@ def _level(image: Image.Image, x: int) -> int:
 
 
 def _percentile(image: Image.Image, fraction: float) -> int:
-    values = sorted(_luma(image).getdata())
+    values = sorted(_luma(image).get_flattened_data())
     return values[int(len(values) * fraction)]
 
 
@@ -104,11 +104,11 @@ def _max_channel_diff(left: Image.Image, right: Image.Image) -> int:
 def _black_levels(image: Image.Image, source: Image.Image) -> list[int]:
     """Rendered levels of every pixel that was pure black in ``source``."""
 
-    width = source.width
     return [
-        image.getpixel((index % width, index // width))[0]
-        for index, pixel in enumerate(source.getdata())
-        if pixel == (0, 0, 0)
+        image.getpixel((x, y))[0]
+        for y in range(source.height)
+        for x in range(source.width)
+        if source.getpixel((x, y)) == (0, 0, 0)
     ]
 
 

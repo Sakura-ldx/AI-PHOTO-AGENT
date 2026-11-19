@@ -146,7 +146,7 @@ $node = "C:\path\to\node.exe"
 - 面板第二个 tab 由「摄影学习」改为「知识库」：展示后端自动生成的学习总结，支持主分类/标签筛选、方向懒加载、推荐强度预览与当前照片重建。
 - 新增 Host 代理路由 `GET /knowledge/overview`、`GET /knowledge/summaries`、`GET /knowledge/summaries/:id`、`POST /knowledge/summaries/:id/rebuild`，服务层对应 `knowledgeOverview/knowledgeList/knowledgeGet/knowledgeRebuild`。
 - Client bundle 版本戳更新为 `v2026-11-14.2`；`check-host` 增加知识库路由用例，`smoke-backend` 增加知识库总结/筛选/预览/重建检查。
-- 验证：`node --check`、`check-client`、`check-host`、`smoke-backend`、Python `396 passed`。
+- 验证：`node --check`、`check-client`、`check-host`、`smoke-backend`、Python 回归全部通过。
 
 ### 2026-10-27 图像放大查看
 

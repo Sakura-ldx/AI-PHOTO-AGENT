@@ -61,7 +61,12 @@ def _region_mean(image: Image.Image, box: tuple[int, int, int, int]) -> float:
 
 
 def _channel_spread(image: Image.Image) -> int:
-    return max(max(pixel) - min(pixel) for pixel in image.getdata())
+    return max(
+        max(pixel) - min(pixel)
+        for y in range(image.height)
+        for x in range(image.width)
+        if isinstance(pixel := image.getpixel((x, y)), tuple)
+    )
 
 
 def test_preview_renderer_version_is_v5() -> None:

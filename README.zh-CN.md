@@ -126,6 +126,8 @@ $env:AI_PHOTO_AGENT_ANALYSIS_PROVIDER = "mock"
 ## 安全与行为说明
 
 - 带非 loopback `Origin` 的写请求返回 **403**；没有 `Origin` 头的请求（Lightroom Lua、命令行、`TestClient`）仍允许。这是最小 CSRF 防护，不是认证。
+- `Host` 头只接受 `127.0.0.1`、`localhost`、`[::1]` 与测试主机，其他域名返回 **400**，用于阻断 DNS rebinding。
+- 所有响应都带 `X-Content-Type-Options: nosniff`、`X-Frame-Options: DENY`、`Referrer-Policy: no-referrer` 与 `Cross-Origin-Resource-Policy: same-origin`。
 - 声明 `Content-Length` 超过 `max_upload_bytes + 1 MiB` 时在 **multipart 解析前返回 413**；后续分块读取上限仍然生效。
 - `run_app.py` 在导入 app 之前把实际的 `--host/--port` 发布为 `AI_PHOTO_AGENT_SERVER_URL`，确保 Lightroom 桥接任务回连正确地址；显式设置的环境变量优先。
 - 上传时把脱敏后的 basename 记录到 `PhotoSession.original_filename`，桥接任务在 `photo.original_filename` 中带上它（只含 basename，绝不含绝对路径）。

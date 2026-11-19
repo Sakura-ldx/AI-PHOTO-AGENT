@@ -23,7 +23,7 @@ from app.adapters.analysis import MockAnalysisProvider
 from app.adapters.deepseek_analysis import DeepSeekAnalysisProvider
 from app.config import AppSettings
 from app.launcher import server_url
-from app.main import create_app
+from app.main import _xmp_content_disposition, create_app
 from app.schemas import (
     AdvancedParameters,
     EditingParametersV1,
@@ -232,6 +232,35 @@ def test_cross_origin_writes_are_rejected(tmp_path: Path) -> None:
         "/api/lightroom/status", headers={"Origin": "https://evil.example"}
     )
     assert status.status_code == 200
+
+
+def test_untrusted_host_header_is_rejected(tmp_path: Path) -> None:
+    client, _storage = make_client(tmp_path)
+
+    blocked = client.get("/api/lightroom/status", headers={"Host": "evil.example"})
+    assert blocked.status_code == 400
+    assert blocked.text == "Invalid host header"
+
+    allowed = client.get("/api/lightroom/status", headers={"Host": "127.0.0.1:8000"})
+    assert allowed.status_code == 200
+
+
+def test_browser_hardening_headers_are_set(tmp_path: Path) -> None:
+    client, _storage = make_client(tmp_path)
+    response = client.get("/api/lightroom/status")
+
+    assert response.headers["x-content-type-options"] == "nosniff"
+    assert response.headers["x-frame-options"] == "DENY"
+    assert response.headers["referrer-policy"] == "no-referrer"
+    assert response.headers["cross-origin-resource-policy"] == "same-origin"
+
+
+def test_xmp_filename_strips_header_control_characters() -> None:
+    header = _xmp_content_disposition("bad\r\nX-Injected: yes.xmp")
+
+    assert "\r" not in header
+    assert "\n" not in header
+    assert header.startswith('attachment; filename="badX-Injected: yes.xmp"')
 
 
 # ---------------------------------------------------------------------------

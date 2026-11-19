@@ -10,7 +10,10 @@ from openai import APITimeoutError, OpenAI, OpenAIError
 from pydantic import BaseModel
 
 from app.adapters.analysis import AnalysisProvider
-from app.adapters.model_image import MODEL_IMAGE_MAX_SIZE, prepare_model_image
+from app.adapters.model_image import (
+    MODEL_IMAGE_MAX_SIZE as MODEL_IMAGE_MAX_SIZE,
+    prepare_model_image,
+)
 from app.adapters.vision_models import (
     PHOTO_PROMPT_VERSION,
     PHOTO_SYSTEM_PROMPT,

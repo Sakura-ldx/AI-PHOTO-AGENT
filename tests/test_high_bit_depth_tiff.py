@@ -39,21 +39,21 @@ def test_normalize_to_8bit_scales_sixteen_bit_modes(mode):
     image = Image.new(mode, (5, 1))
     image.putdata([0, 255, 1000, 32768, 65535])
 
-    assert list(normalize_to_8bit(image).getdata()) == [0, 1, 4, 128, 255]
+    assert list(normalize_to_8bit(image).get_flattened_data()) == [0, 1, 4, 128, 255]
 
 
 def test_normalize_to_8bit_stretches_out_of_range_int_values():
     image = Image.new("I", (5, 1))
     image.putdata([0, 1000, 32768, 65535, 70000])
 
-    assert list(normalize_to_8bit(image).getdata()) == [0, 3, 119, 238, 255]
+    assert list(normalize_to_8bit(image).get_flattened_data()) == [0, 3, 119, 238, 255]
 
 
 def test_normalize_to_8bit_handles_unit_float_values():
     image = Image.new("F", (5, 1))
     image.putdata([0.0, 0.25, 0.5, 0.75, 1.0])
 
-    assert list(normalize_to_8bit(image).getdata()) == [0, 63, 127, 191, 255]
+    assert list(normalize_to_8bit(image).get_flattened_data()) == [0, 63, 127, 191, 255]
 
 
 def test_sixteen_bit_tiff_display_preserves_tonal_range(tmp_path):

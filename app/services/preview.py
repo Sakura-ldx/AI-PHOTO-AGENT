@@ -34,6 +34,7 @@ import math
 import os
 import random
 from functools import lru_cache
+from itertools import pairwise
 from pathlib import Path
 from uuid import uuid4
 
@@ -411,7 +412,7 @@ def _shadow_highlight_delta(
 
 def _tone_curve_value(points, level: float) -> float:
     clamped = min(255.0, max(0.0, level))
-    for start, end in zip(points, points[1:]):
+    for start, end in pairwise(points):
         if clamped <= end.x:
             distance = end.x - start.x
             if distance == 0:
@@ -453,7 +454,7 @@ def _apply_white_balance(
         return image
     gains = _white_balance_gains(parameters.temperature, parameters.tint)
     channels = []
-    for channel, gain in zip(image.split(), gains):
+    for channel, gain in zip(image.split(), gains, strict=True):
         # Decode gamma, multiply in linear light, re-encode.
         channel_lut = [
             _clamp_channel(((level / 255.0) ** _GAMMA * gain) ** _INVERSE_GAMMA * 255.0)
@@ -878,7 +879,7 @@ def _apply_channel_curves(
 
     channels: list[Image.Image] = []
     changed = False
-    for channel, curve in zip(image.split(), curves):
+    for channel, curve in zip(image.split(), curves, strict=True):
         if curve is not None and not _curve_is_identity(curve):
             lut = _build_curve_lut(curve)
             if any(value != level for level, value in enumerate(lut)):
@@ -898,9 +899,15 @@ def _gray_mixer_lut(advanced: AdvancedParameters) -> list[int]:
     """
     values = [getattr(advanced, field) for field in _GRAY_MIXER_FIELDS]
     centers = [center for _name, center in _HSL_HUE_CENTERS]
-    anchors = [(center - 256, value) for center, value in zip(centers, values)]
-    anchors += list(zip(centers, values))
-    anchors += [(center + 256, value) for center, value in zip(centers, values)]
+    anchors = [
+        (center - 256, value)
+        for center, value in zip(centers, values, strict=True)
+    ]
+    anchors += list(zip(centers, values, strict=True))
+    anchors += [
+        (center + 256, value)
+        for center, value in zip(centers, values, strict=True)
+    ]
 
     lut: list[int] = []
     segment = 0

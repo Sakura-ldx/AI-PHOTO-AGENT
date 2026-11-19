@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from itertools import pairwise
 from pathlib import Path
 from typing import Annotated, Any, Literal
 
@@ -16,7 +17,7 @@ from pydantic import (
 from app.services.parameter_specs import (
     PARAMETER_SPECS,
     SCALAR_SPECS,
-    ParameterSpec,
+    ParameterSpec as ParameterSpec,
     SPECS_BY_KEY,
     clamp_value,
     is_neutral,
@@ -135,7 +136,7 @@ def _validate_curve(points: list[ToneCurvePoint] | None) -> list[ToneCurvePoint]
         raise ValueError("tone curve needs at least two points")
     if points[0].x != 0 or points[-1].x != 255:
         raise ValueError("tone curve must start at x=0 and end at x=255")
-    if any(left.x >= right.x for left, right in zip(points, points[1:])):
+    if any(left.x >= right.x for left, right in pairwise(points)):
         raise ValueError("tone curve x coordinates must be strictly increasing")
     return points
 
@@ -360,7 +361,7 @@ class EditingParametersV1(BaseModel):
     def validate_tone_curve(cls, points: list[ToneCurvePoint]) -> list[ToneCurvePoint]:
         if points[0].x != 0 or points[-1].x != 255:
             raise ValueError("tone curve must start at x=0 and end at x=255")
-        if any(left.x >= right.x for left, right in zip(points, points[1:])):
+        if any(left.x >= right.x for left, right in pairwise(points)):
             raise ValueError("tone curve x coordinates must be strictly increasing")
         return points
 

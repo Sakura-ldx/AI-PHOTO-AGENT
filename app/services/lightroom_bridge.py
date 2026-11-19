@@ -106,7 +106,6 @@ class LightroomBridge:
         return locations
 
     def status(self) -> LightroomStatusResponse:
-        root = self.detect_root()
         locations = self.locations()
         plugin_installed = bool(
             locations is not None and self._plugin_registered(locations)
