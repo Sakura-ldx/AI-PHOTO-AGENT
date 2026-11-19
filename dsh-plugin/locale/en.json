@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "AI Photo Agent",
+    "description": "Runs the local AI Photo Agent backend for photo diagnosis, three styles, approximate previews, XMP/Lightroom settings, and a learning-summary knowledge base."
+  }
+}

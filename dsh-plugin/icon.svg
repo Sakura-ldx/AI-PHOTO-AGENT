@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="AI 修图">
+  <defs>
+    <linearGradient id="photo-agent-bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#2f6fb3"/>
+      <stop offset="1" stop-color="#1d3f6e"/>
+    </linearGradient>
+    <linearGradient id="photo-agent-spark" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffe6a6"/>
+      <stop offset="1" stop-color="#ffb347"/>
+    </linearGradient>
+  </defs>
+  <rect x="2" y="2" width="60" height="60" rx="14" fill="url(#photo-agent-bg)"/>
+  <circle cx="32" cy="33" r="15" fill="none" stroke="#ffffff" stroke-width="3"/>
+  <g fill="none" stroke="#ffffff" stroke-width="2.4" stroke-linecap="round" opacity="0.92">
+    <path d="M32 18 L32 33 L45 26"/>
+    <path d="M45 26 L39 44 L32 33"/>
+    <path d="M39 44 L20 44 L32 33"/>
+    <path d="M20 44 L19 24 L32 33"/>
+    <path d="M19 24 L32 18"/>
+  </g>
+  <path d="M47 13 l1.9 4.6 L53.5 19.5 l-4.6 1.9 L47 26 l-1.9-4.6 L40.5 19.5 l4.6-1.9 Z" fill="url(#photo-agent-spark)"/>
+</svg>

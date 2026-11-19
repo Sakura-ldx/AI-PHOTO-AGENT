@@ -1,0 +1,37 @@
+{
+  "name": "@local/dsh-photo-agent",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "description": "AI Photo Agent 的 DeepSeek Harness 插件：启动本机后端，提供照片诊断、3 套风格、近似预览、XMP/Lightroom 参数与学习总结知识库",
+  "exports": {
+    ".": "./index.js",
+    "./client": "./client.js",
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.svg"
+  },
+  "files": [
+    "index.js",
+    "client.js",
+    "cordis.patch.yml",
+    "src/**/*.js",
+    "scripts/*.mjs",
+    "locale/*.json",
+    "icon.svg",
+    "README.md"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "immediately": true,
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-sidebar",
+        "@deepseek-ai/dsh-client-ui-session",
+        "@deepseek-ai/dsh-api-remotes"
+      ]
+    }
+  }
+}

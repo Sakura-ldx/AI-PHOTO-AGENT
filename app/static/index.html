@@ -1,0 +1,2150 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>AI Photo Agent</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f5f6f1;
+        --ink: #1d2521;
+        --muted: #65706a;
+        --line: #d9ded7;
+        --panel: #ffffff;
+        --accent: #0f7b68;
+        --accent-dark: #09594d;
+        --warn: #9b4d19;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+        font-family: Inter, "Segoe UI", "Microsoft YaHei", Arial, sans-serif;
+        line-height: 1.5;
+      }
+
+      header {
+        padding: 28px clamp(18px, 4vw, 48px) 18px;
+        border-bottom: 1px solid var(--line);
+        background: #ffffff;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(28px, 4vw, 44px);
+        letter-spacing: 0;
+      }
+
+      .subtitle {
+        margin: 8px 0 0;
+        color: var(--muted);
+        max-width: 860px;
+      }
+
+      .header-top {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        align-items: flex-end;
+        gap: 18px 28px;
+      }
+
+      .view-switch {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .view-switch-btn {
+        display: grid;
+        gap: 2px;
+        min-height: 44px;
+        padding: 8px 16px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #fff;
+        color: var(--ink);
+        text-align: left;
+      }
+
+      .view-switch-btn:hover {
+        background: rgba(15, 123, 104, 0.08);
+      }
+
+      .view-switch-btn[aria-pressed="true"] {
+        border-color: var(--accent);
+        background: var(--accent);
+        color: #fff;
+      }
+
+      .view-switch-title {
+        font-size: 15px;
+        font-weight: 700;
+      }
+
+      .view-switch-note {
+        font-size: 12px;
+        opacity: 0.78;
+      }
+
+      .app-view {
+        display: grid;
+        gap: 18px;
+      }
+
+      .app-view[hidden] {
+        display: none;
+      }
+
+      main {
+        display: grid;
+        gap: 18px;
+        padding: 22px clamp(18px, 4vw, 48px) 44px;
+      }
+
+      section,
+      .style-card {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+      }
+
+      section {
+        padding: 18px;
+      }
+
+      h2,
+      h3 {
+        margin: 0 0 12px;
+        letter-spacing: 0;
+      }
+
+      .upload-row,
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        align-items: center;
+      }
+
+      .uploaded-photo-box {
+        margin: 14px 0 4px;
+      }
+
+      .uploaded-photo {
+        display: block;
+        width: auto;
+        max-width: 100%;
+        max-height: 480px;
+        margin: 0 auto;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #0d1210;
+      }
+
+      .uploaded-photo-box[hidden] {
+        display: none;
+      }
+
+      input[type="file"],
+      input[type="text"],
+      input[type="url"] {
+        max-width: 100%;
+      }
+
+      input[type="text"],
+      input[type="url"] {
+        width: 100%;
+        min-height: 38px;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        padding: 0 10px;
+        font: inherit;
+        color: var(--ink);
+        background: #fff;
+      }
+
+      label {
+        display: grid;
+        gap: 6px;
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      button {
+        border: 0;
+        border-radius: 6px;
+        background: var(--accent);
+        color: white;
+        min-height: 38px;
+        padding: 0 14px;
+        font-weight: 650;
+        cursor: pointer;
+      }
+
+      button:hover {
+        background: var(--accent-dark);
+      }
+
+      button:disabled {
+        cursor: not-allowed;
+        opacity: 0.45;
+      }
+
+      .status {
+        color: var(--muted);
+        min-height: 24px;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 14px;
+      }
+
+      .style-card {
+        padding: 14px;
+        cursor: pointer;
+      }
+
+      .style-card.selected {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 2px rgba(15, 123, 104, 0.18);
+      }
+
+      .ai-pick {
+        display: inline-block;
+        margin-left: 8px;
+        padding: 2px 8px;
+        border-radius: 999px;
+        background: rgba(15, 123, 104, 0.12);
+        color: var(--accent);
+        font-size: 12px;
+        font-weight: 600;
+        vertical-align: middle;
+      }
+
+      .style-card p {
+        margin: 7px 0;
+        color: var(--muted);
+      }
+
+      .meta-line {
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      .analysis-list {
+        display: grid;
+        gap: 8px;
+        padding-left: 20px;
+      }
+
+      .preview-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        gap: 14px;
+      }
+
+      .preview-box {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        overflow: hidden;
+        background: #eef1ec;
+        min-height: 220px;
+      }
+
+      .preview-box img {
+        display: block;
+        width: 100%;
+        height: auto;
+      }
+
+      .preview-label {
+        padding: 8px 10px;
+        font-size: 14px;
+        color: var(--muted);
+        background: #fff;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .range-row {
+        display: grid;
+        grid-template-columns: minmax(160px, 1fr) 54px;
+        gap: 12px;
+        align-items: center;
+        max-width: 420px;
+      }
+
+      .warning {
+        color: var(--warn);
+      }
+
+      .success {
+        color: var(--accent-dark);
+      }
+
+      .lightroom-panel {
+        display: grid;
+        gap: 10px;
+      }
+
+      .lightroom-panel .meta-line {
+        margin: 0;
+      }
+
+      .settings-grid {
+        display: grid;
+        grid-template-columns: minmax(280px, 1.4fr) minmax(220px, 0.6fr);
+        gap: 16px;
+      }
+
+      .settings-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+      }
+
+      .settings-table th,
+      .settings-table td {
+        border-bottom: 1px solid var(--line);
+        padding: 5px 8px;
+        text-align: left;
+        vertical-align: top;
+      }
+
+      .settings-table th {
+        width: 55%;
+        color: var(--muted);
+        font-weight: 600;
+      }
+
+      .settings-table td {
+        font-variant-numeric: tabular-nums;
+        word-break: break-word;
+      }
+
+      .pill {
+        display: inline-block;
+        border-radius: 999px;
+        padding: 2px 9px;
+        font-size: 12px;
+        color: var(--accent-dark);
+        background: rgba(15, 123, 104, 0.12);
+      }
+
+      .pill.warn {
+        color: var(--warn);
+        background: rgba(155, 77, 25, 0.12);
+      }
+
+      a.download {
+        color: var(--accent-dark);
+        font-weight: 700;
+      }
+
+      /* Section 7: 学习总结与知识库 */
+      #knowledgeSection {
+        scroll-margin-top: 16px;
+      }
+
+      .knowledge-hint {
+        margin: 8px 0 0;
+      }
+
+      .knowledge-hint a {
+        color: var(--accent-dark);
+        font-weight: 700;
+      }
+
+      .knowledge-stats {
+        margin: 12px 0 0;
+        padding: 8px 10px;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        background: #f8faf6;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .knowledge-filters {
+        display: grid;
+        gap: 8px;
+        margin: 12px 0 16px;
+        padding: 12px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #fbfcf9;
+      }
+
+      .knowledge-facet-rows {
+        display: grid;
+        gap: 8px;
+      }
+
+      .filter-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+      }
+
+      .filter-label {
+        min-width: 56px;
+        color: var(--muted);
+        font-size: 13px;
+        font-weight: 600;
+      }
+
+      .chip-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        align-items: center;
+      }
+
+      .chip {
+        min-height: 0;
+        padding: 3px 10px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: #fff;
+        color: var(--ink);
+        font-size: 13px;
+        font-weight: 500;
+      }
+
+      .chip:hover {
+        background: rgba(15, 123, 104, 0.08);
+        color: var(--accent-dark);
+      }
+
+      .chip.selected {
+        border-color: var(--accent);
+        background: var(--accent);
+        color: #fff;
+      }
+
+      .chip-count {
+        margin-left: 3px;
+        font-size: 12px;
+        opacity: 0.72;
+      }
+
+      button.secondary {
+        border: 1px solid var(--line);
+        background: #fff;
+        color: var(--accent-dark);
+      }
+
+      button.secondary:hover {
+        background: rgba(15, 123, 104, 0.08);
+      }
+
+      .knowledge-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+        gap: 16px;
+        align-items: start;
+      }
+
+      .knowledge-grid[hidden],
+      .knowledge-filters[hidden],
+      .filter-row[hidden] {
+        display: none;
+      }
+
+      .knowledge-card {
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel);
+      }
+
+      .knowledge-card-media {
+        position: relative;
+        background: #eef1ec;
+      }
+
+      .knowledge-thumbnail {
+        display: block;
+        width: 100%;
+        height: 200px;
+        object-fit: cover;
+        cursor: zoom-in;
+      }
+
+      .knowledge-thumbnail-placeholder {
+        display: grid;
+        place-items: center;
+        min-height: 140px;
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      .knowledge-category-badge {
+        position: absolute;
+        top: 8px;
+        left: 8px;
+        background: rgba(255, 255, 255, 0.92);
+      }
+
+      .knowledge-card-body {
+        display: grid;
+        gap: 8px;
+        padding: 12px;
+      }
+
+      .knowledge-card-body p {
+        margin: 0;
+      }
+
+      .knowledge-summary {
+        color: var(--ink);
+      }
+
+      .knowledge-tags {
+        gap: 4px;
+      }
+
+      .knowledge-tag.measurement {
+        color: var(--warn);
+        background: rgba(155, 77, 25, 0.12);
+      }
+
+      .knowledge-directions-title {
+        margin: 4px 0 0;
+        font-size: 15px;
+      }
+
+      .knowledge-directions {
+        display: grid;
+        gap: 10px;
+      }
+
+      .knowledge-direction-preview-list {
+        display: grid;
+        gap: 4px;
+      }
+
+      .knowledge-direction-preview-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+        justify-content: space-between;
+        font-size: 14px;
+      }
+
+      .knowledge-direction {
+        display: grid;
+        gap: 6px;
+        padding: 10px;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        background: #fbfcf9;
+      }
+
+      .knowledge-direction p {
+        margin: 0;
+        color: var(--muted);
+      }
+
+      .knowledge-direction p strong {
+        color: var(--ink);
+      }
+
+      .knowledge-direction-head {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+      }
+
+      .knowledge-direction-head h4 {
+        margin: 0;
+        font-size: 15px;
+      }
+
+      .knowledge-warnings {
+        display: grid;
+        gap: 4px;
+        margin: 0;
+        padding-left: 18px;
+        font-size: 14px;
+      }
+
+      .knowledge-direction-preview {
+        margin: 0;
+        overflow: hidden;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        background: #eef1ec;
+      }
+
+      .knowledge-direction-preview img {
+        display: block;
+        width: 100%;
+        height: auto;
+        cursor: zoom-in;
+      }
+
+      .knowledge-direction-preview figcaption {
+        padding: 6px 8px;
+        border-top: 1px solid var(--line);
+        background: #fff;
+      }
+
+      .knowledge-empty {
+        padding: 20px;
+        border: 1px dashed var(--line);
+        border-radius: 8px;
+        text-align: center;
+      }
+
+      .knowledge-empty .meta-line {
+        margin: 0 auto;
+        max-width: 720px;
+      }
+
+      @media (max-width: 640px) {
+        .knowledge-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .knowledge-thumbnail {
+          height: 180px;
+        }
+
+        .view-switch {
+          width: 100%;
+        }
+
+        .view-switch-btn {
+          flex: 1 1 150px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="header-top">
+        <div>
+          <h1>AI Photo Agent</h1>
+          <p class="subtitle">
+            上传照片获得可解释的修图建议和 Lightroom XMP 预设；每次分析都会自动生成学习总结，
+            可随时切换到知识库回顾、筛选和重新生成。
+          </p>
+        </div>
+        <nav class="view-switch" aria-label="界面切换">
+          <button id="studioViewBtn" class="view-switch-btn" type="button" aria-pressed="true">
+            <span class="view-switch-title">修图</span>
+            <span class="view-switch-note">上传 · 诊断 · 预览 · 导出</span>
+          </button>
+          <button id="knowledgeViewBtn" class="view-switch-btn" type="button" aria-pressed="false">
+            <span class="view-switch-title">知识库</span>
+            <span class="view-switch-note">学习总结 · 分类筛选</span>
+          </button>
+        </nav>
+      </div>
+    </header>
+
+    <main>
+      <div id="studioView" class="app-view">
+        <section>
+          <h2>上传照片</h2>
+          <div class="upload-row">
+            <input
+              id="fileInput"
+              type="file"
+              accept="image/jpeg,image/png,image/tiff,image/x-canon-cr3,.jpg,.jpeg,.png,.tif,.tiff,.cr3"
+            />
+          </div>
+          <p class="meta-line">选择文件后会自动上传并分析，不需要再点按钮。支持 JPG/JPEG、PNG、TIF/TIFF 和 Canon CR3。CR3 使用相机内嵌 JPEG 预览做分析，原始 .cr3 文件保持不变。</p>
+          <figure id="uploadedPhotoBox" class="uploaded-photo-box" hidden>
+            <img id="uploadedImage" class="uploaded-photo" alt="上传照片预览" />
+            <figcaption id="uploadedPhotoCaption" class="meta-line"></figcaption>
+          </figure>
+          <p id="status" class="status" aria-live="polite"></p>
+        </section>
+
+        <section id="analysisSection" hidden>
+          <h2>图片诊断</h2>
+          <p class="meta-line">
+            诊断和 3 个风格由服务端配置的 AI 视觉模型根据当前照片实时生成；
+            默认使用 DeepSeek Vision，不再返回固定模板。排序第一是 AI 首选，已自动选中，
+            也可以改选其他风格。
+          </p>
+          <p id="summary"></p>
+          <p id="analysisKnowledgeHint" class="meta-line knowledge-hint" hidden>
+            本次修图已生成学习总结：<a href="#knowledgeSection">前往知识库查看 →</a>
+          </p>
+          <div class="grid">
+            <div>
+              <h3>技术观察</h3>
+              <ul id="technical" class="analysis-list"></ul>
+            </div>
+            <div>
+              <h3>构图观察</h3>
+              <ul id="composition" class="analysis-list"></ul>
+            </div>
+            <div>
+              <h3>色彩与影调</h3>
+              <ul id="colorTone" class="analysis-list"></ul>
+            </div>
+          </div>
+        </section>
+
+        <section id="stylesSection" hidden>
+          <h2>选择风格</h2>
+          <div id="styleGrid" class="grid"></div>
+        </section>
+
+        <section id="previewSection" hidden>
+          <h2>预览与导出</h2>
+          <div class="range-row">
+            <label for="intensity">修图强度</label>
+            <input id="intensity" type="range" min="0" max="1" value="1" step="0.05" />
+            <strong id="intensityLabel">100%</strong>
+          </div>
+          <div class="actions">
+            <button id="previewBtn" disabled>生成预览</button>
+            <button id="exportBtn" disabled>导出 XMP</button>
+            <span id="actionStatus" class="status" aria-live="polite"></span>
+          </div>
+          <div class="preview-grid">
+            <div class="preview-box">
+              <div class="preview-label" id="originalLabel">原图</div>
+              <img id="originalImage" alt="原图预览" />
+            </div>
+            <div class="preview-box">
+              <div class="preview-label">近似预览</div>
+              <img id="previewImage" alt="修图预览" />
+            </div>
+          </div>
+          <p id="appliedAdjustments" class="meta-line" hidden></p>
+          <p id="downloadLine"></p>
+          <p id="previewKnowledgeHint" class="meta-line knowledge-hint" hidden>
+            本次修图已生成学习总结：<a href="#knowledgeSection">前往知识库查看 →</a>
+          </p>
+        </section>
+
+        <section id="lightroomSection">
+          <h2>Lightroom 联动</h2>
+          <div class="lightroom-panel">
+            <p id="lightroomStatusText" class="status" aria-live="polite"></p>
+            <p class="meta-line">首次安装插件后请重启 Lightroom Classic；插件菜单位于“文件 &gt; 增效工具附加功能”（任意模块，推荐）或“图库 &gt; 增效工具附加功能”（仅图库模块）。</p>
+            <div class="actions">
+              <button id="developBtn" disabled>生成 Lightroom 参数</button>
+              <button id="sendLightroomBtn" disabled>发送到 Lightroom</button>
+              <button id="installLightroomBtn">安装 / 检查 Lightroom 插件</button>
+              <button id="refreshLightroomBtn">刷新状态</button>
+            </div>
+            <p id="lightroomActionStatus" class="status" aria-live="polite"></p>
+            <div id="developResult" hidden>
+              <h3>Lightroom 显影参数</h3>
+              <p id="developMeta" class="meta-line"></p>
+              <div class="settings-grid">
+                <table class="settings-table">
+                  <tbody id="developSettingsBody"></tbody>
+                </table>
+                <div>
+                  <h3>预设文件</h3>
+                  <p id="developDownloadLine"></p>
+                  <p class="meta-line">
+                    点击“发送到 Lightroom”会把同一套参数写入 Lightroom 预设目录并排队。
+                    在 Lightroom 中选中照片后运行“图库 &gt; 增效工具附加功能 &gt;
+                    AI Photo Agent - 应用 Web 端待处理修图”；插件会写入 Before 快照、
+                    应用参数并切换到修改照片模块。
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+      </div>
+
+      <div id="knowledgeView" class="app-view" hidden>
+        <section id="knowledgeSection">
+          <h2>学习总结与知识库</h2>
+          <p class="meta-line">
+            每次完成图片诊断后，服务端会整理分析结论、标签和 3 个修图方向并生成学习总结；
+            这里汇总最近的分析记录，可按主分类或标签筛选，也可以为当前照片重新生成总结。
+            点击顶部「修图」可返回修图工作台。
+          </p>
+          <div class="actions">
+            <button id="refreshKnowledgeBtn">刷新知识库</button>
+            <button id="rebuildKnowledgeBtn" class="secondary" hidden>为当前照片重新生成总结</button>
+            <span id="knowledgeStatus" class="status" aria-live="polite"></span>
+          </div>
+          <p id="knowledgeStats" class="meta-line knowledge-stats" hidden></p>
+          <div id="knowledgeFilters" class="knowledge-filters" hidden>
+            <div id="knowledgeCategoryFilterRow" class="filter-row" hidden>
+              <span class="filter-label">主分类</span>
+              <div id="knowledgeCategoryChips" class="chip-row"></div>
+            </div>
+            <div id="knowledgeFacetRows" class="knowledge-facet-rows"></div>
+            <div class="filter-row">
+              <button id="clearKnowledgeFiltersBtn" class="secondary" hidden>清除筛选</button>
+              <span id="knowledgeActiveFilter" class="meta-line"></span>
+            </div>
+          </div>
+          <div id="knowledgeGrid" class="knowledge-grid"></div>
+          <div id="knowledgeEmpty" class="knowledge-empty" hidden>
+            <h3 id="knowledgeEmptyTitle">还没有学习总结</h3>
+            <p id="knowledgeEmptyBody" class="meta-line"></p>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <script>
+      const KNOWLEDGE_PAGE_SIZE = 50;
+      const KNOWLEDGE_REFRESH_LABEL = "刷新知识库";
+      const KNOWLEDGE_REBUILD_LABEL = "为当前照片重新生成总结";
+      const KNOWLEDGE_DIMENSION_LABELS = {
+        subject: "题材场景",
+        light: "光线",
+        color: "色彩",
+        tone: "影调",
+        composition: "构图",
+        issue: "待改善",
+      };
+      // Local endpoints may legitimately be slow, but the UI must never wait
+      // forever on a dead or hung service.
+      const REQUEST_TIMEOUT_MS = 600000;
+      const STATUS_TIMEOUT_MS = 15000;
+      const NETWORK_ERROR_MESSAGE =
+        "无法连接到本地服务，请确认 AI Photo Agent 服务已启动后重试。";
+      let lightroomStatusSequence = 0;
+      let knowledgeLoadSequence = 0;
+      let knowledgeViewLoading = false;
+      const state = {
+        photoId: null,
+        selectedStyleId: null,
+        analysis: null,
+        uploading: false,
+        originalObjectUrl: null,
+        lightroomStatus: null,
+        developResult: null,
+        knowledgeOverview: null,
+        knowledgeList: null,
+        knowledgeFilter: { dimension: null, tag: null, category: null },
+        knowledgeDetails: {},
+      };
+
+      const el = (id) => document.getElementById(id);
+      const status = el("status");
+      const actionStatus = el("actionStatus");
+      const lightroomStatusText = el("lightroomStatusText");
+      const lightroomActionStatus = el("lightroomActionStatus");
+      const knowledgeStatus = el("knowledgeStatus");
+      const knowledgeCardRefs = new Map();
+
+      el("fileInput").addEventListener("change", uploadAndAnalyze);
+      el("fileInput").addEventListener("click", () => {
+        // Allow choosing the same file again while keeping the previous
+        // selection visible after an upload completes.
+        el("fileInput").value = "";
+      });
+      el("previewBtn").addEventListener("click", generatePreview);
+      el("exportBtn").addEventListener("click", exportPreset);
+      el("developBtn").addEventListener("click", generateLightroomSettings);
+      el("sendLightroomBtn").addEventListener("click", sendToLightroom);
+      el("installLightroomBtn").addEventListener("click", installLightroomPlugin);
+      el("refreshLightroomBtn").addEventListener("click", loadLightroomStatus);
+      el("refreshKnowledgeBtn").addEventListener("click", () => {
+        void loadKnowledge();
+      });
+      el("rebuildKnowledgeBtn").addEventListener("click", rebuildKnowledgeSummary);
+      el("clearKnowledgeFiltersBtn").addEventListener("click", clearKnowledgeFilters);
+      el("studioViewBtn").addEventListener("click", () => setActiveView("studio"));
+      el("knowledgeViewBtn").addEventListener("click", () => setActiveView("knowledge"));
+      bindKnowledgeHint("analysisKnowledgeHint");
+      bindKnowledgeHint("previewKnowledgeHint");
+      el("intensity").addEventListener("input", () => {
+        el("intensityLabel").textContent = `${Math.round(Number(el("intensity").value) * 100)}%`;
+      });
+
+      setActiveView("studio");
+      loadLightroomStatus();
+
+      async function uploadAndAnalyze() {
+        if (state.uploading) return;
+        const input = el("fileInput");
+        const file = input.files[0];
+        if (!file) {
+          status.textContent = "请先选择一张 JPG、CR3 或 TIFF 图像。";
+          status.classList.add("warning");
+          return;
+        }
+        state.uploading = true;
+        input.disabled = true;
+        resetPhotoWorkflow();
+        status.classList.remove("warning");
+        status.textContent = "已选择文件，正在自动上传...";
+        try {
+          const form = new FormData();
+          form.append("file", file);
+          const uploaded = await postForm("/api/photos", form);
+          const photoId = uploaded.photo_id;
+          state.photoId = photoId;
+          state.originalObjectUrl = null;
+          const displayUrl = `${sameOriginUrl(uploaded.display_url)}?t=${Date.now()}`;
+          const sourceLabel =
+            uploaded.metadata.render_source === "embedded_preview"
+              ? "原图（CR3 内嵌预览，已按相机方向校正）"
+              : uploaded.metadata.format === "TIFF"
+                ? "原图（TIFF 显示预览，已校正方向）"
+                : "原图（已按方向校正）";
+          el("uploadedImage").src = displayUrl;
+          el("uploadedImage").alt = `上传照片预览：${uploaded.metadata.format}`;
+          el("uploadedPhotoBox").hidden = false;
+          el("uploadedPhotoCaption").textContent =
+            `${uploaded.metadata.format} · ${uploaded.metadata.width} × ` +
+            `${uploaded.metadata.height} · ${sourceLabel}`;
+          el("originalImage").src = displayUrl;
+          status.textContent =
+            `上传完成：${uploaded.metadata.format} ` +
+            `${uploaded.metadata.width} × ${uploaded.metadata.height}，正在分析...`;
+          el("originalLabel").textContent = sourceLabel;
+
+          const analysis = await postAction(`/api/photos/${photoId}/analyze`);
+          if (state.photoId !== photoId) return;
+          state.analysis = analysis;
+          renderAnalysis(analysis);
+          status.textContent = "AI 分析完成，请选择一个风格。";
+          updateKnowledgeRebuildButton();
+          void refreshKnowledgeAfterAnalysis(photoId);
+        } catch (error) {
+          status.classList.add("warning");
+          status.textContent = errorMessage(error, "照片上传或分析失败。");
+        } finally {
+          state.uploading = false;
+          input.disabled = false;
+        }
+      }
+
+      function resetPhotoWorkflow() {
+        if (state.originalObjectUrl) {
+          URL.revokeObjectURL(state.originalObjectUrl);
+        }
+        state.photoId = null;
+        state.selectedStyleId = null;
+        state.analysis = null;
+        state.originalObjectUrl = null;
+        state.developResult = null;
+
+        el("analysisSection").hidden = true;
+        el("stylesSection").hidden = true;
+        el("previewSection").hidden = true;
+        el("summary").textContent = "";
+        fillList("technical", []);
+        fillList("composition", []);
+        fillList("colorTone", []);
+        el("styleGrid").replaceChildren();
+        el("uploadedImage").removeAttribute("src");
+        el("uploadedImage").alt = "上传照片预览";
+        el("uploadedPhotoCaption").textContent = "";
+        el("uploadedPhotoBox").hidden = true;
+        el("originalImage").removeAttribute("src");
+        el("originalLabel").textContent = "原图";
+        el("previewImage").removeAttribute("src");
+        el("downloadLine").replaceChildren();
+        el("previewBtn").disabled = true;
+        el("exportBtn").disabled = true;
+        el("developBtn").disabled = true;
+        el("sendLightroomBtn").disabled = true;
+        el("developResult").hidden = true;
+        el("developSettingsBody").replaceChildren();
+        el("developMeta").textContent = "";
+        el("developDownloadLine").replaceChildren();
+        actionStatus.classList.remove("warning");
+        actionStatus.textContent = "";
+        lightroomActionStatus.classList.remove("warning");
+        lightroomActionStatus.textContent = "";
+        setKnowledgeHints(false);
+        updateKnowledgeRebuildButton();
+      }
+
+      function renderAnalysis(analysis) {
+        el("analysisSection").hidden = false;
+        el("stylesSection").hidden = false;
+        el("previewSection").hidden = false;
+        el("summary").textContent = analysis.overall_summary;
+        fillList("technical", analysis.technical_diagnosis);
+        fillList("composition", analysis.composition_observations);
+        fillList("colorTone", analysis.color_tone_observations);
+
+        const grid = el("styleGrid");
+        grid.replaceChildren();
+        analysis.recommended_styles.forEach((style, index) => {
+          const card = document.createElement("article");
+          card.className = "style-card";
+          card.dataset.styleId = style.id;
+          card.tabIndex = 0;
+          card.setAttribute("role", "button");
+          card.setAttribute("aria-pressed", "false");
+          const heading = document.createElement("h3");
+          heading.textContent = style.name;
+          if (index === 0) {
+            const pick = document.createElement("span");
+            pick.className = "ai-pick";
+            pick.textContent = "AI 首选";
+            heading.appendChild(pick);
+          }
+          card.appendChild(heading);
+          appendParagraph(card, style.description);
+          appendLabeledParagraph(card, "适合原因：", style.best_fit_reason);
+          appendLabeledParagraph(card, "预期效果：", style.expected_visual_impact);
+          card.addEventListener("click", () => selectStyle(style.id));
+          card.addEventListener("keydown", (event) => {
+            if (event.key === "Enter" || event.key === " ") {
+              event.preventDefault();
+              selectStyle(style.id);
+            }
+          });
+          grid.appendChild(card);
+        });
+        selectStyle(analysis.recommended_styles[0].id);
+      }
+
+      function selectStyle(styleId) {
+        state.selectedStyleId = styleId;
+        document.querySelectorAll(".style-card").forEach((card) => {
+          const selected = card.dataset.styleId === styleId;
+          card.classList.toggle("selected", selected);
+          card.setAttribute("aria-pressed", selected ? "true" : "false");
+        });
+        el("previewBtn").disabled = false;
+        el("exportBtn").disabled = false;
+        el("developBtn").disabled = false;
+        el("sendLightroomBtn").disabled = false;
+        state.developResult = null;
+        el("developResult").hidden = true;
+        el("appliedAdjustments").hidden = true;
+        el("appliedAdjustments").textContent = "";
+        actionStatus.textContent = "已选择风格，可以生成预览、导出 XMP 或发送到 Lightroom。";
+      }
+
+      function fillList(id, items) {
+        const list = el(id);
+        list.replaceChildren();
+        items.forEach((item) => {
+          const li = document.createElement("li");
+          li.textContent = item;
+          list.appendChild(li);
+        });
+      }
+
+      const APPLIED_ADJUSTMENTS = [
+        ["exposure", "曝光", " EV", 2],
+        ["contrast", "对比度", "", 0],
+        ["highlights", "高光", "", 0],
+        ["shadows", "阴影", "", 0],
+        ["whites", "白色", "", 0],
+        ["blacks", "黑色", "", 0],
+        ["temperature", "色温", "", 0],
+        ["tint", "色调", "", 0],
+        ["vibrance", "自然饱和度", "", 0],
+        ["saturation", "饱和度", "", 0],
+        ["clarity", "清晰度", "", 0],
+        ["dehaze", "去朦胧", "", 0],
+        ["texture", "纹理", "", 0],
+      ];
+
+      function formatAdjustment(label, unit, digits, value) {
+        const rounded = digits > 0 ? value.toFixed(digits) : String(Math.round(value));
+        const sign = value > 0 ? "+" : "";
+        return `${label} ${sign}${rounded}${unit}`;
+      }
+
+      function adaptiveNote(strength) {
+        const value = Number(strength);
+        if (!Number.isFinite(value) || value >= 0.995) return "";
+        return `（已按原图亮度自适应到 ${Math.round(value * 100)}%）`;
+      }
+
+      function renderAppliedAdjustments(parameters, summary, strength) {
+        const container = el("appliedAdjustments");
+        if (!parameters) {
+          container.hidden = true;
+          container.textContent = "";
+          return;
+        }
+        const note = adaptiveNote(strength);
+        if (summary) {
+          container.textContent = `实际生效：${summary}${note}`;
+          container.hidden = false;
+          return;
+        }
+        const parts = [];
+        for (const [key, label, unit, digits] of APPLIED_ADJUSTMENTS) {
+          const value = Number(parameters[key] ?? 0);
+          if (!Number.isFinite(value) || value === 0) continue;
+          parts.push(formatAdjustment(label, unit, digits, value));
+        }
+        const hsl = parameters.hsl || {};
+        const colored = Object.values(hsl).filter(
+          (channel) => channel && (channel.hue || channel.saturation || channel.luminance),
+        ).length;
+        if (colored > 0) parts.push(`HSL ${colored} 个色相`);
+        if (parameters.sharpening && parameters.sharpening.amount) {
+          parts.push(`锐化 ${Math.round(parameters.sharpening.amount)}`);
+        }
+        if (parts.length === 0) {
+          container.hidden = true;
+          container.textContent = "";
+          return;
+        }
+        container.textContent = `实际生效：${parts.join(" · ")}${note}`;
+        container.hidden = false;
+      }
+
+      async function generatePreview() {
+        if (!state.selectedStyleId) return;
+        const button = el("previewBtn");
+        const photoId = state.photoId;
+        const payload = currentPayload();
+        button.disabled = true;
+        actionStatus.classList.remove("warning");
+        actionStatus.textContent = "正在生成预览...";
+        try {
+          const result = await postJson(`/api/photos/${photoId}/preview`, payload);
+          if (state.photoId !== photoId || state.selectedStyleId !== payload.style_id) return;
+          el("previewImage").src = `${sameOriginUrl(result.preview_url)}?t=${Date.now()}`;
+          renderAppliedAdjustments(result.parameters, result.parameters_summary, result.strength);
+          actionStatus.textContent = "预览已生成。";
+        } catch (error) {
+          showActionError(error, "预览生成失败。");
+        } finally {
+          button.disabled = !state.selectedStyleId;
+        }
+      }
+
+      async function exportPreset() {
+        if (!state.selectedStyleId) return;
+        const button = el("exportBtn");
+        const photoId = state.photoId;
+        const payload = currentPayload();
+        button.disabled = true;
+        actionStatus.classList.remove("warning");
+        actionStatus.textContent = "正在导出 XMP...";
+        try {
+          const result = await postJson(`/api/photos/${photoId}/export`, payload);
+          if (state.photoId !== photoId || state.selectedStyleId !== payload.style_id) return;
+          const downloadLine = el("downloadLine");
+          const downloadLink = document.createElement("a");
+          downloadLink.className = "download";
+          downloadLink.href = sameOriginUrl(result.download_url);
+          downloadLink.download = `${result.preset_name}.xmp`;
+          downloadLink.textContent = `下载 ${result.preset_name}.xmp`;
+          downloadLine.replaceChildren(downloadLink);
+          downloadLink.click();
+          actionStatus.textContent =
+            "XMP 预设已生成并开始下载；如浏览器拦截，请点击下方链接。";
+        } catch (error) {
+          showActionError(error, "XMP 导出失败。");
+        } finally {
+          button.disabled = !state.selectedStyleId;
+        }
+      }
+
+      async function generateLightroomSettings() {
+        if (!state.selectedStyleId) return;
+        const button = el("developBtn");
+        const photoId = state.photoId;
+        const payload = currentPayload();
+        button.disabled = true;
+        lightroomActionStatus.classList.remove("warning");
+        lightroomActionStatus.textContent = "正在生成 Lightroom 参数...";
+        try {
+          const development = await postJson(`/api/photos/${photoId}/develop`, payload);
+          if (state.photoId !== photoId || state.selectedStyleId !== payload.style_id) return;
+          state.developResult = development;
+          renderDevelopSettings(development);
+          lightroomActionStatus.textContent = "Lightroom 参数与 XMP 预设已生成。";
+        } catch (error) {
+          lightroomActionStatus.classList.add("warning");
+          lightroomActionStatus.textContent = errorMessage(error, "Lightroom 参数生成失败。");
+        } finally {
+          button.disabled = !state.selectedStyleId;
+        }
+      }
+
+      function renderDevelopSettings(development) {
+        el("developResult").hidden = false;
+        el("developMeta").textContent =
+          `${development.style_name} · 强度 ${Math.round(development.intensity * 100)}% · ` +
+          `${development.preset_name} · ${development.mapping_version} · ${development.develop_settings_version}`;
+
+        const body = el("developSettingsBody");
+        body.replaceChildren();
+        Object.entries(development.develop_settings)
+          .sort(([left], [right]) => left.localeCompare(right))
+          .forEach(([key, value]) => {
+            const row = document.createElement("tr");
+            const name = document.createElement("th");
+            name.textContent = key;
+            const valueCell = document.createElement("td");
+            valueCell.textContent = formatSettingValue(value);
+            row.append(name, valueCell);
+            body.appendChild(row);
+          });
+
+        const downloadLine = el("developDownloadLine");
+        const downloadLink = document.createElement("a");
+        downloadLink.className = "download";
+        downloadLink.href = sameOriginUrl(development.xmp_url);
+        downloadLink.download = `${development.preset_name}.xmp`;
+        downloadLink.textContent = `下载 ${development.preset_name}.xmp`;
+        downloadLine.replaceChildren(downloadLink);
+      }
+
+      function formatSettingValue(value) {
+        if (Array.isArray(value)) return value.join(", ");
+        if (value && typeof value === "object") return JSON.stringify(value);
+        if (typeof value === "number") return Number.isInteger(value) ? String(value) : value.toFixed(2);
+        return String(value);
+      }
+
+      async function sendToLightroom() {
+        if (!state.selectedStyleId) return;
+        const button = el("sendLightroomBtn");
+        const photoId = state.photoId;
+        const payload = currentPayload();
+        button.disabled = true;
+        lightroomActionStatus.classList.remove("warning");
+        lightroomActionStatus.textContent = "正在写入 Lightroom 预设并排队...";
+        try {
+          const result = await postJson(`/api/photos/${photoId}/lightroom`, {
+            ...payload,
+            install_plugin: true,
+          });
+          if (state.photoId !== photoId || state.selectedStyleId !== payload.style_id) return;
+          if (result.status === "queued") {
+            lightroomActionStatus.textContent =
+              `已排队（${result.job_id}）。请在 Lightroom Classic 中选中目标照片，` +
+              `运行“图库 > 增效工具附加功能 > AI Photo Agent - 应用 Web 端待处理修图”` +
+              `即可应用并查看效果。预设：${result.preset_path}`;
+          } else {
+            lightroomActionStatus.classList.add("warning");
+            lightroomActionStatus.textContent = result.message;
+          }
+          await loadLightroomStatus();
+        } catch (error) {
+          lightroomActionStatus.classList.add("warning");
+          lightroomActionStatus.textContent = errorMessage(error, "发送到 Lightroom 失败。");
+        } finally {
+          button.disabled = !state.selectedStyleId;
+        }
+      }
+
+      async function installLightroomPlugin() {
+        const button = el("installLightroomBtn");
+        const idleLabel = button.textContent;
+        button.disabled = true;
+        button.textContent = "安装中...";
+        lightroomActionStatus.classList.remove("warning");
+        lightroomActionStatus.textContent = "正在安装 Lightroom 插件...";
+        try {
+          const result = await postAction("/api/lightroom/install-plugin");
+          lightroomActionStatus.classList.toggle("warning", !result.installed);
+          lightroomActionStatus.textContent = result.message;
+          await loadLightroomStatus();
+        } catch (error) {
+          lightroomActionStatus.classList.add("warning");
+          lightroomActionStatus.textContent = errorMessage(error, "Lightroom 插件安装失败。");
+        } finally {
+          button.disabled = false;
+          button.textContent = idleLabel;
+        }
+      }
+
+      async function loadLightroomStatus() {
+        // Several callers may refresh concurrently (startup, install, send);
+        // only the newest request may render, or an older response wins.
+        lightroomStatusSequence += 1;
+        const sequence = lightroomStatusSequence;
+        try {
+          const result = await fetchWithTimeout(
+            "/api/lightroom/status",
+            {},
+            STATUS_TIMEOUT_MS,
+          ).then(handleResponse);
+          if (sequence !== lightroomStatusSequence) return;
+          state.lightroomStatus = result;
+          renderLightroomStatus(result);
+        } catch (error) {
+          if (sequence !== lightroomStatusSequence) return;
+          lightroomStatusText.classList.add("warning");
+          lightroomStatusText.textContent = errorMessage(error, "无法读取 Lightroom 状态。");
+        }
+      }
+
+      function renderLightroomStatus(result) {
+        lightroomStatusText.classList.remove("warning");
+        const lines = [];
+        if (result.detected) {
+          lines.push(`已检测到 Lightroom Classic：${result.lightroom_root}`);
+        } else {
+          lines.push("未检测到 Lightroom Classic。仍可下载 XMP 手动导入。");
+          lightroomStatusText.classList.add("warning");
+        }
+        lines.push(`服务：${result.server_url}`);
+        const text = document.createElement("span");
+        text.textContent = lines.join("  ");
+        const pill = document.createElement("span");
+        pill.className = result.plugin_installed ? "pill" : "pill warn";
+        pill.textContent = result.plugin_installed ? "插件已安装" : "插件未安装";
+        lightroomStatusText.replaceChildren(text, document.createTextNode("  "), pill);
+      }
+
+      function showActionError(error, fallback) {
+        actionStatus.classList.add("warning");
+        actionStatus.textContent = errorMessage(error, fallback);
+      }
+
+      function updateKnowledgeRebuildButton() {
+        const button = el("rebuildKnowledgeBtn");
+        button.hidden = !state.photoId;
+        if (!button.hidden) button.textContent = KNOWLEDGE_REBUILD_LABEL;
+      }
+
+      function setKnowledgeHints(visible) {
+        el("analysisKnowledgeHint").hidden = !visible;
+        el("previewKnowledgeHint").hidden = !visible;
+      }
+
+      function bindKnowledgeHint(id) {
+        el(id).addEventListener("click", (event) => {
+          const target = event.target;
+          if (!target || typeof target.closest !== "function" || !target.closest("a")) {
+            return;
+          }
+          event.preventDefault();
+          setActiveView("knowledge");
+        });
+      }
+
+      function setViewButtonState(button, active) {
+        button.setAttribute("aria-pressed", active ? "true" : "false");
+      }
+
+      // 修图工作台与知识库是两个顶层界面，用顶栏按钮互相切换；切换时保留
+      // 各自已有的状态，只在第一次进入知识库时懒加载数据。
+      function setActiveView(view) {
+        const showKnowledge = view === "knowledge";
+        el("studioView").hidden = showKnowledge;
+        el("knowledgeView").hidden = !showKnowledge;
+        setViewButtonState(el("studioViewBtn"), !showKnowledge);
+        setViewButtonState(el("knowledgeViewBtn"), showKnowledge);
+        document.title = showKnowledge ? "AI Photo Agent · 知识库" : "AI Photo Agent";
+        if (showKnowledge) {
+          updateKnowledgeRebuildButton();
+          if (!state.knowledgeList && !knowledgeViewLoading) {
+            void loadKnowledge();
+          }
+        }
+        if (typeof window.scrollTo === "function") {
+          window.scrollTo(0, 0);
+        }
+      }
+
+      async function refreshKnowledgeAfterAnalysis(photoId) {
+        let available = false;
+        try {
+          const summary = await getJson(
+            `/api/knowledge/summaries/${encodeURIComponent(photoId)}`,
+            STATUS_TIMEOUT_MS,
+          );
+          if (state.photoId !== photoId) return;
+          state.knowledgeDetails[photoId] = summary;
+          available = true;
+        } catch {
+          if (state.photoId !== photoId) return;
+          available = false;
+        }
+        if (state.photoId !== photoId) return;
+        setKnowledgeHints(available);
+        await loadKnowledge();
+      }
+
+      function buildKnowledgeListUrl(offset = 0) {
+        const filter = state.knowledgeFilter;
+        const params = new URLSearchParams();
+        params.set("limit", String(KNOWLEDGE_PAGE_SIZE));
+        params.set("offset", String(offset));
+        if (filter.tag) {
+          params.set("tag", filter.tag);
+          if (filter.dimension) params.set("dimension", filter.dimension);
+        }
+        if (filter.category) params.set("category", filter.category);
+        return `/api/knowledge/summaries?${params.toString()}`;
+      }
+
+      async function loadKnowledge() {
+        knowledgeLoadSequence += 1;
+        const sequence = knowledgeLoadSequence;
+        knowledgeViewLoading = true;
+        const button = el("refreshKnowledgeBtn");
+        button.disabled = true;
+        button.textContent = "刷新中...";
+        knowledgeStatus.classList.remove("warning");
+        knowledgeStatus.textContent = "正在加载学习总结...";
+        try {
+          const [overview, list] = await Promise.all([
+            getJson("/api/knowledge/overview"),
+            getJson(buildKnowledgeListUrl()),
+          ]);
+          if (sequence !== knowledgeLoadSequence) return;
+          state.knowledgeOverview = overview;
+          state.knowledgeList = list;
+          renderKnowledgeStats(overview);
+          renderKnowledgeFilters(overview);
+          renderKnowledgeCards(list);
+          updateKnowledgeRebuildButton();
+          knowledgeStatus.textContent = describeKnowledgeLoadStatus(list);
+        } catch (error) {
+          if (sequence !== knowledgeLoadSequence) return;
+          knowledgeStatus.classList.add("warning");
+          knowledgeStatus.textContent = errorMessage(error, "无法加载学习总结。");
+          if (!state.knowledgeList) renderKnowledgeLoadFailure(error);
+        } finally {
+          if (sequence === knowledgeLoadSequence) {
+            knowledgeViewLoading = false;
+            button.disabled = false;
+            button.textContent = KNOWLEDGE_REFRESH_LABEL;
+          }
+        }
+      }
+
+      function describeKnowledgeLoadStatus(list) {
+        const total = Number(list.total) || 0;
+        const shown = list && Array.isArray(list.items) ? list.items.length : 0;
+        const filtered = hasKnowledgeFilter();
+        if (total === 0) {
+          return filtered
+            ? "当前筛选没有匹配的学习总结。"
+            : "还没有学习总结，完成一次照片分析后会自动生成。";
+        }
+        if (shown < total) {
+          return `已显示最近 ${shown} 条，共 ${total} 条学习总结${filtered ? "（已筛选）" : ""}。`;
+        }
+        return filtered ? `已筛选出 ${total} 条学习总结。` : `共 ${total} 条学习总结。`;
+      }
+
+      function renderKnowledgeLoadFailure(error) {
+        const grid = el("knowledgeGrid");
+        grid.hidden = true;
+        grid.replaceChildren();
+        el("knowledgeStats").hidden = true;
+        el("knowledgeFilters").hidden = true;
+        const empty = el("knowledgeEmpty");
+        empty.hidden = false;
+        el("knowledgeEmptyTitle").textContent = "学习总结加载失败";
+        el("knowledgeEmptyBody").textContent = errorMessage(
+          error,
+          "无法加载学习总结，请稍后点击「刷新知识库」重试。",
+        );
+      }
+
+      function renderKnowledgeStats(overview) {
+        const stats = el("knowledgeStats");
+        const total = Number(overview.total_summaries) || 0;
+        if (total === 0) {
+          stats.hidden = true;
+          stats.textContent = "";
+          return;
+        }
+        const categories = Number(overview.covered_categories) || 0;
+        const average = overview.average_intensity;
+        const averageText =
+          typeof average === "number" && Number.isFinite(average)
+            ? `${Math.round(average * 100)}%`
+            : "暂无";
+        stats.textContent =
+          `已记录 ${total} 张 · 覆盖 ${categories} 类 · ` +
+          `平均推荐强度 ${averageText} · 最近更新 ${formatKnowledgeTimestamp(overview.latest_generated_at)}`;
+        stats.hidden = false;
+      }
+
+      function renderKnowledgeFilters(overview) {
+        const categories = Array.isArray(overview.primary_categories)
+          ? overview.primary_categories
+          : [];
+        const categoryRow = el("knowledgeCategoryFilterRow");
+        const categoryChips = el("knowledgeCategoryChips");
+        categoryChips.replaceChildren();
+        categories.forEach((item) => {
+          const category = String((item && item.category) || "");
+          if (!category) return;
+          const selected = state.knowledgeFilter.category === category;
+          categoryChips.appendChild(
+            createKnowledgeChip(category, Number(item.count) || 0, selected, () =>
+              toggleKnowledgeCategory(category),
+            ),
+          );
+        });
+        categoryRow.hidden = categoryChips.childElementCount === 0;
+
+        const facets = Array.isArray(overview.facets) ? overview.facets : [];
+        const facetRows = el("knowledgeFacetRows");
+        facetRows.replaceChildren();
+        facets.forEach((facet) => {
+          const tags = Array.isArray(facet.tags) ? facet.tags : [];
+          if (tags.length === 0) return;
+          const row = document.createElement("div");
+          row.className = "filter-row";
+          const label = document.createElement("span");
+          label.className = "filter-label";
+          label.textContent =
+            facet.label || KNOWLEDGE_DIMENSION_LABELS[facet.dimension] || "标签";
+          const chips = document.createElement("div");
+          chips.className = "chip-row";
+          tags.forEach((tag) => {
+            const tagLabel = String((tag && tag.label) || "");
+            if (!tagLabel) return;
+            const dimension = tag.dimension || facet.dimension || null;
+            const selected =
+              state.knowledgeFilter.tag === tagLabel &&
+              state.knowledgeFilter.dimension === dimension;
+            chips.appendChild(
+              createKnowledgeChip(tagLabel, Number(tag.count) || 0, selected, () =>
+                toggleKnowledgeTag(dimension, tagLabel),
+              ),
+            );
+          });
+          row.append(label, chips);
+          facetRows.appendChild(row);
+        });
+
+        const filters = el("knowledgeFilters");
+        filters.hidden =
+          categoryChips.childElementCount === 0 && facetRows.childElementCount === 0;
+        el("clearKnowledgeFiltersBtn").hidden = !hasKnowledgeFilter();
+        const activeText = describeKnowledgeFilter();
+        const active = el("knowledgeActiveFilter");
+        active.textContent = activeText;
+        active.hidden = !activeText;
+      }
+
+      function createKnowledgeChip(label, count, selected, onClick) {
+        const chip = document.createElement("button");
+        chip.type = "button";
+        chip.className = selected ? "chip selected" : "chip";
+        chip.textContent = label;
+        if (count > 0) {
+          const badge = document.createElement("span");
+          badge.className = "chip-count";
+          badge.textContent = String(count);
+          chip.appendChild(badge);
+        }
+        chip.addEventListener("click", onClick);
+        return chip;
+      }
+
+      function toggleKnowledgeCategory(category) {
+        state.knowledgeFilter.category =
+          state.knowledgeFilter.category === category ? null : category;
+        void loadKnowledge();
+      }
+
+      function toggleKnowledgeTag(dimension, label) {
+        const filter = state.knowledgeFilter;
+        if (filter.tag === label && filter.dimension === dimension) {
+          filter.tag = null;
+          filter.dimension = null;
+        } else {
+          filter.tag = label;
+          filter.dimension = dimension || null;
+        }
+        void loadKnowledge();
+      }
+
+      function clearKnowledgeFilters() {
+        state.knowledgeFilter = { dimension: null, tag: null, category: null };
+        void loadKnowledge();
+      }
+
+      function hasKnowledgeFilter() {
+        const filter = state.knowledgeFilter;
+        return Boolean(filter.category || filter.tag || filter.dimension);
+      }
+
+      function describeKnowledgeFilter() {
+        const filter = state.knowledgeFilter;
+        const parts = [];
+        if (filter.category) parts.push(`主分类「${filter.category}」`);
+        if (filter.tag) {
+          const dimension = filter.dimension
+            ? KNOWLEDGE_DIMENSION_LABELS[filter.dimension] || filter.dimension
+            : "";
+          parts.push(dimension ? `${dimension}「${filter.tag}」` : `标签「${filter.tag}」`);
+        }
+        return parts.length ? `当前筛选：${parts.join(" · ")}` : "";
+      }
+
+      function renderKnowledgeCards(list) {
+        const grid = el("knowledgeGrid");
+        const items = list && Array.isArray(list.items) ? list.items : [];
+        knowledgeCardRefs.clear();
+        grid.replaceChildren();
+        items.forEach((item) => {
+          if (!item || typeof item.photo_id !== "string") return;
+          const card = renderKnowledgeCard(item);
+          knowledgeCardRefs.set(item.photo_id, card);
+          grid.appendChild(card);
+        });
+        grid.hidden = items.length === 0;
+        renderKnowledgeEmpty(items.length === 0);
+        void hydrateKnowledgeDetails(items);
+      }
+
+      function renderKnowledgeEmpty(isEmpty) {
+        const empty = el("knowledgeEmpty");
+        if (!isEmpty) {
+          empty.hidden = true;
+          return;
+        }
+        empty.hidden = false;
+        if (hasKnowledgeFilter()) {
+          el("knowledgeEmptyTitle").textContent = "当前筛选没有结果";
+          el("knowledgeEmptyBody").textContent =
+            "换一个标签或主分类试试，也可以点「清除筛选」查看全部学习总结。";
+        } else {
+          el("knowledgeEmptyTitle").textContent = "还没有学习总结";
+          el("knowledgeEmptyBody").textContent =
+            "请先在「上传照片」完成一次分析，系统会自动生成学习总结并显示在这里。";
+        }
+      }
+
+      function renderKnowledgeCard(item) {
+        const card = document.createElement("article");
+        card.className = "knowledge-card";
+
+        const image = item.image || {};
+        const media = document.createElement("div");
+        media.className = "knowledge-card-media";
+        const thumbnailUrl = knowledgeAssetUrl(image.display_url);
+        if (thumbnailUrl) {
+          const thumbnail = document.createElement("img");
+          thumbnail.className = "knowledge-thumbnail";
+          thumbnail.src = thumbnailUrl;
+          thumbnail.alt = `学习总结缩略图：${item.primary_category || "未分类"}`;
+          thumbnail.loading = "lazy";
+          thumbnail.addEventListener("click", () => openKnowledgeImage(thumbnailUrl));
+          media.appendChild(thumbnail);
+          if (item.primary_category) {
+            const badge = document.createElement("span");
+            badge.className = "pill knowledge-category-badge";
+            badge.textContent = item.primary_category;
+            media.appendChild(badge);
+          }
+        } else {
+          const placeholder = document.createElement("div");
+          placeholder.className = "knowledge-thumbnail-placeholder";
+          placeholder.textContent = "缩略图不可用";
+          media.appendChild(placeholder);
+        }
+        card.appendChild(media);
+
+        const body = document.createElement("div");
+        body.className = "knowledge-card-body";
+
+        const metaParts = [];
+        const dimensions =
+          image.width && image.height ? `${image.width} × ${image.height}` : "";
+        if (image.format) metaParts.push(image.format);
+        if (dimensions) metaParts.push(dimensions);
+        const size = formatKnowledgeFileSize(image.file_size);
+        if (size) metaParts.push(size);
+        if (image.color_mode) metaParts.push(image.color_mode);
+        if (metaParts.length) appendParagraph(body, metaParts.join(" · "), "meta-line");
+
+        const sourceParts = [];
+        if (image.original_filename) sourceParts.push(image.original_filename);
+        if (image.render_source === "embedded_preview") sourceParts.push("CR3 内嵌预览");
+        const generated = formatKnowledgeTimestamp(item.generated_at);
+        if (generated) sourceParts.push(`生成于 ${generated}`);
+        if (sourceParts.length) appendParagraph(body, sourceParts.join(" · "), "meta-line");
+
+        if (item.overall_summary) {
+          appendParagraph(body, item.overall_summary, "knowledge-summary");
+        }
+
+        const tags = Array.isArray(item.tags) ? item.tags : [];
+        if (tags.length) {
+          const tagList = document.createElement("div");
+          tagList.className = "chip-row knowledge-tags";
+          tags.forEach((tag) => {
+            if (!tag || !tag.label) return;
+            const pill = document.createElement("span");
+            pill.className =
+              tag.source === "measurement"
+                ? "pill knowledge-tag measurement"
+                : "pill knowledge-tag";
+            pill.textContent = tag.label;
+            if (tag.source === "measurement") {
+              pill.title = "由图像测量推断";
+            }
+            tagList.appendChild(pill);
+          });
+          body.appendChild(tagList);
+        }
+
+        const title = document.createElement("h4");
+        title.className = "knowledge-directions-title";
+        title.textContent = "修图方向";
+        body.appendChild(title);
+
+        const directions = document.createElement("div");
+        directions.className = "knowledge-directions";
+        body.appendChild(directions);
+        const cached = state.knowledgeDetails[item.photo_id];
+        if (cached) renderKnowledgeDirections(directions, cached);
+        else renderKnowledgeDirectionPreview(directions, item);
+
+        card.appendChild(body);
+        return card;
+      }
+
+      function formatKnowledgeTimestamp(value) {
+        if (typeof value !== "string" || !value) return "未知";
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) return "未知";
+        const pad = (part) => String(part).padStart(2, "0");
+        return (
+          `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ` +
+          `${pad(date.getHours())}:${pad(date.getMinutes())}`
+        );
+      }
+
+      function formatKnowledgeFileSize(value) {
+        const bytes = Number(value);
+        if (!Number.isFinite(bytes) || bytes <= 0) return "";
+        if (bytes < 1024) return `${Math.round(bytes)} B`;
+        if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+        return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+      }
+
+      function knowledgeAssetUrl(value, cacheBust = false) {
+        if (typeof value !== "string" || !value) return "";
+        try {
+          const url = new URL(sameOriginUrl(value));
+          if (cacheBust) url.searchParams.set("t", String(Date.now()));
+          return url.href;
+        } catch {
+          return "";
+        }
+      }
+
+      function openKnowledgeImage(href) {
+        if (!href) return;
+        window.open(href, "_blank", "noopener");
+      }
+
+      function createIntensityPill(intensity, verified = true) {
+        const pill = document.createElement("span");
+        const percent =
+          typeof intensity === "number" && Number.isFinite(intensity)
+            ? Math.round(intensity * 100)
+            : null;
+        pill.className = "pill";
+        pill.textContent = percent === null ? "推荐强度未知" : `推荐 ${percent}%`;
+        if (verified === false) {
+          pill.classList.add("warn");
+          pill.title = "该方向的预览生成或校验未通过";
+        }
+        return pill;
+      }
+
+      function renderKnowledgeDirectionPreview(container, item) {
+        appendKnowledgeDirectionSummary(container, item);
+        appendParagraph(container, "正在加载推荐理由与参数总结...", "meta-line");
+      }
+
+      function appendKnowledgeDirectionSummary(container, item) {
+        const names = Array.isArray(item.style_names) ? item.style_names : [];
+        const intensities = Array.isArray(item.recommended_intensities)
+          ? item.recommended_intensities
+          : [];
+        if (names.length || intensities.length) {
+          const list = document.createElement("div");
+          list.className = "knowledge-direction-preview-list";
+          names.forEach((name, index) => {
+            const row = document.createElement("div");
+            row.className = "knowledge-direction-preview-row";
+            const label = document.createElement("span");
+            label.textContent = `${index + 1}. ${name || "未命名方向"}`;
+            row.appendChild(label);
+            row.appendChild(createIntensityPill(intensities[index], true));
+            list.appendChild(row);
+          });
+          container.appendChild(list);
+        }
+
+        const preview = knowledgeAssetUrl(item.preview_url, true);
+        if (preview) {
+          const figure = document.createElement("figure");
+          figure.className = "knowledge-direction-preview";
+          const img = document.createElement("img");
+          img.src = preview;
+          img.alt = "推荐强度预览";
+          img.loading = "lazy";
+          img.addEventListener("click", () => openKnowledgeImage(preview));
+          const caption = document.createElement("figcaption");
+          caption.className = "meta-line";
+          caption.textContent = "推荐强度预览（点击放大）";
+          figure.append(img, caption);
+          container.appendChild(figure);
+        }
+      }
+
+      function renderKnowledgeDirections(container, summary) {
+        container.replaceChildren();
+        const directions =
+          summary && Array.isArray(summary.directions) ? summary.directions : [];
+        directions.forEach((direction, index) => {
+          renderKnowledgeDirection(container, direction, index);
+        });
+      }
+
+      function renderKnowledgeDirection(container, direction, index) {
+        const safe = direction || {};
+        const block = document.createElement("div");
+        block.className = "knowledge-direction";
+
+        const head = document.createElement("div");
+        head.className = "knowledge-direction-head";
+        const title = document.createElement("h4");
+        title.textContent = `${index + 1}. ${safe.style_name || "未命名方向"}`;
+        head.appendChild(title);
+        head.appendChild(
+          createIntensityPill(safe.recommended_intensity, safe.verified !== false),
+        );
+        if (safe.verified === false) {
+          const warn = document.createElement("span");
+          warn.className = "pill warn";
+          warn.textContent = "预览未通过校验";
+          warn.title = "该方向的预览图生成或校验未通过，参数仅供参考。";
+          head.appendChild(warn);
+        }
+        block.appendChild(head);
+
+        if (safe.intensity_reason) {
+          appendLabeledParagraph(block, "推荐理由：", safe.intensity_reason);
+        }
+        if (safe.parameters_summary) {
+          appendLabeledParagraph(block, "参数总结：", safe.parameters_summary);
+        }
+
+        const recommended = Number(safe.recommended_intensity);
+        const effective = Number(safe.effective_strength);
+        if (
+          Number.isFinite(recommended) &&
+          Number.isFinite(effective) &&
+          recommended - effective > 0.005
+        ) {
+          appendParagraph(
+            block,
+            `实际生效强度 ${Math.round(effective * 100)}%（已按原图亮度自适应）`,
+            "meta-line",
+          );
+        }
+
+        const warnings = Array.isArray(safe.warnings)
+          ? safe.warnings.filter(Boolean)
+          : [];
+        if (warnings.length) {
+          const list = document.createElement("ul");
+          list.className = "knowledge-warnings";
+          warnings.forEach((warning) => {
+            const warningItem = document.createElement("li");
+            warningItem.className = "warning";
+            warningItem.textContent = warning;
+            list.appendChild(warningItem);
+          });
+          block.appendChild(list);
+        }
+
+        const preview = knowledgeAssetUrl(safe.preview_url, true);
+        if (preview) {
+          const figure = document.createElement("figure");
+          figure.className = "knowledge-direction-preview";
+          const img = document.createElement("img");
+          img.src = preview;
+          img.alt = `修图预览：${safe.style_name || "方向"}`;
+          img.loading = "lazy";
+          img.addEventListener("click", () => openKnowledgeImage(preview));
+          const caption = document.createElement("figcaption");
+          caption.className = "meta-line";
+          const intensity = Number(
+            Number.isFinite(Number(safe.preview_intensity))
+              ? safe.preview_intensity
+              : safe.recommended_intensity,
+          );
+          caption.textContent = Number.isFinite(intensity)
+            ? `预览 · 推荐强度 ${Math.round(intensity * 100)}%（点击放大）`
+            : "预览（点击放大）";
+          figure.append(img, caption);
+          block.appendChild(figure);
+        } else {
+          appendParagraph(block, "暂无预览图（重新生成总结可补充）。", "meta-line");
+        }
+
+        container.appendChild(block);
+      }
+
+      async function hydrateKnowledgeDetails(items) {
+        const pending = (Array.isArray(items) ? items : []).filter(
+          (item) =>
+            item &&
+            typeof item.photo_id === "string" &&
+            !state.knowledgeDetails[item.photo_id],
+        );
+        if (pending.length === 0) return;
+        let cursor = 0;
+        const workerCount = Math.min(4, pending.length);
+        const workers = [];
+        for (let index = 0; index < workerCount; index += 1) {
+          workers.push(
+            (async () => {
+              while (cursor < pending.length) {
+                const item = pending[cursor];
+                cursor += 1;
+                await hydrateKnowledgeDetail(item);
+              }
+            })(),
+          );
+        }
+        await Promise.all(workers);
+      }
+
+      async function hydrateKnowledgeDetail(item) {
+        const photoId = item.photo_id;
+        try {
+          const summary = await getJson(
+            `/api/knowledge/summaries/${encodeURIComponent(photoId)}`,
+            STATUS_TIMEOUT_MS,
+          );
+          state.knowledgeDetails[photoId] = summary;
+          const card = knowledgeCardRefs.get(photoId);
+          if (!card) return;
+          const container = card.querySelector(".knowledge-directions");
+          if (container) renderKnowledgeDirections(container, summary);
+        } catch (error) {
+          const card = knowledgeCardRefs.get(photoId);
+          if (!card || state.knowledgeDetails[photoId]) return;
+          const container = card.querySelector(".knowledge-directions");
+          if (container) renderKnowledgeDirectionsError(container, error, item);
+        }
+      }
+
+      function renderKnowledgeDirectionsError(container, error, item) {
+        container.replaceChildren();
+        appendKnowledgeDirectionSummary(container, item);
+        appendParagraph(
+          container,
+          errorMessage(error, "修图方向详情加载失败。"),
+          "meta-line warning",
+        );
+        const retry = document.createElement("button");
+        retry.type = "button";
+        retry.className = "secondary";
+        retry.textContent = "重试加载修图方向";
+        retry.addEventListener("click", () => {
+          retry.disabled = true;
+          retry.textContent = "重试中...";
+          void hydrateKnowledgeDetail(item).finally(() => {
+            if (retry.isConnected) {
+              retry.disabled = false;
+              retry.textContent = "重试加载修图方向";
+            }
+          });
+        });
+        container.appendChild(retry);
+      }
+
+      async function rebuildKnowledgeSummary() {
+        const photoId = state.photoId;
+        const button = el("rebuildKnowledgeBtn");
+        if (!photoId) {
+          knowledgeStatus.classList.add("warning");
+          knowledgeStatus.textContent = "请先在「上传照片」完成一次分析，再重新生成学习总结。";
+          return;
+        }
+        button.disabled = true;
+        button.textContent = "重新生成中...";
+        knowledgeStatus.classList.remove("warning");
+        knowledgeStatus.textContent = "正在为当前照片重新生成学习总结...";
+        try {
+          const response = await fetchWithTimeout(
+            `/api/knowledge/summaries/${encodeURIComponent(photoId)}/rebuild`,
+            { method: "POST" },
+          );
+          if (response.status === 409) {
+            knowledgeStatus.classList.add("warning");
+            knowledgeStatus.textContent =
+              "这张照片还没有完成分析，请等待分析完成后再重新生成总结。";
+            return;
+          }
+          const summary = await handleResponse(response);
+          if (state.photoId !== photoId) return;
+          state.knowledgeDetails[photoId] = summary;
+          await loadKnowledge();
+          if (!knowledgeStatus.classList.contains("warning")) {
+            knowledgeStatus.textContent = "学习总结已重新生成。";
+          }
+        } catch (error) {
+          knowledgeStatus.classList.add("warning");
+          knowledgeStatus.textContent = errorMessage(error, "重新生成学习总结失败。");
+        } finally {
+          button.disabled = false;
+          button.textContent = KNOWLEDGE_REBUILD_LABEL;
+          updateKnowledgeRebuildButton();
+        }
+      }
+
+      function appendParagraph(parent, text, className = "") {
+        const paragraph = document.createElement("p");
+        paragraph.textContent = text;
+        if (className) paragraph.className = className;
+        parent.appendChild(paragraph);
+      }
+
+      function appendLabeledParagraph(parent, labelText, valueText) {
+        const paragraph = document.createElement("p");
+        const label = document.createElement("strong");
+        label.textContent = labelText;
+        paragraph.append(label, document.createTextNode(valueText));
+        parent.appendChild(paragraph);
+      }
+
+      function appendTextElement(parent, tagName, text) {
+        const element = document.createElement(tagName);
+        element.textContent = text;
+        parent.appendChild(element);
+      }
+
+      function sameOriginUrl(value) {
+        if (typeof value !== "string" || !value) {
+          throw new Error("下载地址无效。");
+        }
+        const url = new URL(value, window.location.href);
+        if (url.origin !== window.location.origin) {
+          throw new Error("下载地址必须来自当前站点。");
+        }
+        return url.href;
+      }
+
+      function currentPayload() {
+        return {
+          style_id: state.selectedStyleId,
+          intensity: Number(el("intensity").value),
+        };
+      }
+
+      function fetchWithTimeout(url, options = {}, timeoutMs = REQUEST_TIMEOUT_MS) {
+        if (typeof AbortController !== "function") {
+          return fetch(url, options);
+        }
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), timeoutMs);
+        return fetch(url, { ...options, signal: controller.signal }).finally(() =>
+          clearTimeout(timer),
+        );
+      }
+
+      async function postForm(url, body) {
+        const response = await fetchWithTimeout(url, { method: "POST", body });
+        return handleResponse(response);
+      }
+
+      async function postJson(url, body) {
+        const response = await fetchWithTimeout(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        return handleResponse(response);
+      }
+
+      async function postAction(url) {
+        const response = await fetchWithTimeout(url, { method: "POST" });
+        return handleResponse(response);
+      }
+
+      async function getJson(url, timeoutMs = REQUEST_TIMEOUT_MS) {
+        const response = await fetchWithTimeout(url, {}, timeoutMs);
+        return handleResponse(response);
+      }
+
+      async function handleResponse(response) {
+        const responseText = await response.text();
+        let data = {};
+        let isJson = !responseText;
+        if (responseText) {
+          try {
+            data = JSON.parse(responseText);
+            isJson = true;
+          } catch {
+            isJson = false;
+          }
+        }
+        if (!response.ok) {
+          throw new Error(apiErrorMessage(isJson ? data : null, response.status));
+        }
+        if (!isJson) {
+          throw new Error(`服务器返回了无法解析的响应（HTTP ${response.status}）。`);
+        }
+        return data;
+      }
+
+      function apiErrorMessage(data, statusCode) {
+        const detail = data && data.detail;
+        if (typeof detail === "string" && detail) {
+          return detail;
+        }
+        if (Array.isArray(detail)) {
+          const messages = detail.map(formatValidationIssue).filter(Boolean);
+          if (messages.length) return messages.join("；");
+        }
+        return `请求失败（HTTP ${statusCode}）。`;
+      }
+
+      function formatValidationIssue(issue) {
+        if (!issue || typeof issue !== "object") return "";
+        const location = Array.isArray(issue.loc)
+          ? issue.loc.filter((part) => part !== "body").join(".")
+          : "";
+        const message = typeof issue.msg === "string" ? issue.msg : "输入无效";
+        return location ? `${location}：${message}` : message;
+      }
+
+      function errorMessage(error, fallback) {
+        if (error instanceof DOMException && error.name === "AbortError") {
+          return "请求超时，服务没有及时响应，请稍后重试。";
+        }
+        // A refused connection surfaces as TypeError: Failed to fetch; show a
+        // start-the-service hint instead of the raw browser wording.
+        if (error instanceof TypeError) return NETWORK_ERROR_MESSAGE;
+        if (error instanceof Error && error.message) return error.message;
+        if (typeof error === "string" && error) return error;
+        return fallback;
+      }
+
+      window.addEventListener("unhandledrejection", (event) => {
+        console.error("Unhandled promise rejection", event.reason);
+      });
+    </script>
+  </body>
+</html>

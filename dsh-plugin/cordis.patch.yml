@@ -1,0 +1,3 @@
+- insert:
+    - id: photo-agent
+      name: '@local/dsh-photo-agent'

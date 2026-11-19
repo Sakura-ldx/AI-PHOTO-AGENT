@@ -1,0 +1,44 @@
+# Dependencies
+node_modules/
+.venv/
+venv/
+__pycache__/
+
+# Build outputs
+dist/
+build/
+.next/
+out/
+coverage/
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# OS and editor files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Generated assets and local uploads
+uploads/
+references/
+generated/
+exports/
+data/
+*.xmp
+*.lrtemplate
+lightroom/AIPhotoAgent.lrplugin/bridge-path.txt
+lightroom/AIPhotoAgent.lrplugin/review-state.json
+lightroom/AIPhotoAgent.lrplugin/Config.local.lua
+
+# Test and tooling scratch directories
+.pytest_cache/
+.pytest_tmp/
+pytest-of-*/
+.tmp/
+.acl-recovery/
+.agents/
+py-root.txt
