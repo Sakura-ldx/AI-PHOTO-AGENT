@@ -1,5 +1,7 @@
 # AI Photo Agent
 
+**Language:** English | [简体中文](README.zh-CN.md)
+
 AI Photo Agent is a local-first AI photography assistant. Upload a photo, let a vision
 model diagnose it in context, get three photo-specific editing styles, and send the
 result to Lightroom Classic for a real preview.

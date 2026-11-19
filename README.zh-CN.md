@@ -1,5 +1,7 @@
 # AI Photo Agent
 
+**语言：** [English](README.md) | 简体中文
+
 AI Photo Agent 是一款本地优先的 AI 摄影助手：上传照片后由视觉模型实时判断问题、
 推荐风格并生成 Lightroom 参数，也可以把参数直接送入本机 Lightroom Classic 查看效果。
 
