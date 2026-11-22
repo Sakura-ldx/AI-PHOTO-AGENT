@@ -49,7 +49,8 @@ Before publishing a fork or a screenshot, check that it does not contain:
 - API keys, tokens, cookies or provider request/response dumps;
 - Lightroom catalog paths or bridge logs.
 
-Run the scanner locally:
+Run the scanner locally. It checks tracked files plus non-ignored untracked files,
+so run it before staging a new document or fixture:
 
 ```powershell
 .\.venv\Scripts\python.exe scripts\check_privacy.py

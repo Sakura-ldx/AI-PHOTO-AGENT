@@ -1,12 +1,16 @@
 #!/usr/bin/env python3
-"""Fail when tracked content or git metadata contains personal data or secrets.
+"""Fail when working-tree content or git metadata contains personal data or secrets.
 
 The scanner is intentionally heuristic: it catches common Windows profile paths,
-personal photo-library paths, machine identifiers, free-mail addresses and
-well-known API key prefixes. It is a guard rail, not a replacement for review.
+personal photo-library paths, machine identifiers, private network addresses,
+free-mail addresses and well-known API key prefixes. It is a guard rail, not a
+replacement for review.
+
+Tracked, modified and non-ignored untracked files are scanned, so a file must be
+checked before it is staged rather than only after it enters the index.
 
 Usage:
-    python scripts/check_privacy.py            # current tracked files
+    python scripts/check_privacy.py            # current working tree
     python scripts/check_privacy.py --history  # also scan git history metadata
 """
 
@@ -36,6 +40,17 @@ PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
         re.compile(
             _USER_DIR + r"(?!<user>|<name>|Public\\|Default\\|evil\\)[^\\\s]+",
             re.IGNORECASE,
+        ),
+    ),
+    (
+        "private-ipv4",
+        re.compile(
+            r"\b(?:"
+            r"10\.\d{1,3}\.\d{1,3}\.\d{1,3}"
+            r"|192\.168\.\d{1,3}\.\d{1,3}"
+            r"|172\.(?:1[6-9]|2[0-9]|3[01])\.\d{1,3}\.\d{1,3}"
+            r"|169\.254\.\d{1,3}\.\d{1,3}"
+            r")\b"
         ),
     ),
     (
@@ -132,8 +147,17 @@ def scan_path(path: Path, *, root: Path = ROOT) -> list[Finding]:
     return scan_text(location, text)
 
 
-def tracked_files(root: Path = ROOT) -> list[Path]:
-    result = _git(root, "ls-files", "-z")
+def repository_files(root: Path = ROOT) -> list[Path]:
+    """Return tracked files plus non-ignored untracked working-tree files."""
+
+    result = _git(
+        root,
+        "ls-files",
+        "-z",
+        "--cached",
+        "--others",
+        "--exclude-standard",
+    )
     if result is None:
         return []
     names = [name for name in result.split("\x00") if name]
@@ -142,7 +166,7 @@ def tracked_files(root: Path = ROOT) -> list[Path]:
 
 def scan_repository(root: Path = ROOT) -> list[Finding]:
     findings: list[Finding] = []
-    for path in tracked_files(root):
+    for path in repository_files(root):
         relative = path.relative_to(root) if path.is_absolute() else path
         findings.extend(scan_path(path, root=root))
         if relative.name in {".env", "Config.local.lua"}:

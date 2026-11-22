@@ -416,7 +416,7 @@ approximate，不等同于 Camera Raw。
 | --- | --- |
 | `tests/test_api.py` | Phase 1/2 HTTP 全流程、后台分析任务、第 9 图上传/遗留超限分析、502/504、MPO、URL、私有路径、OpenAPI 和 Provider 契约。 |
 | `tests/test_env_file.py` | `.env` 解析：BOM、注释、引号、`export`、空值与进程环境优先级。 |
-| `tests/test_privacy_scan.py` | 隐私扫描规则：Windows 用户目录、照片库、SID、API Key、占位符放行与仓库自检。 |
+| `tests/test_privacy_scan.py` | 隐私扫描规则：Windows 用户目录、照片库、SID、API Key、占位符放行、未跟踪工作树文件与仓库自检。 |
 | `tests/test_services.py` | metadata、EXIF、Mock 输出、参数缩放、预览、色调曲线、Tint、XMP、内容 token、原子失败和资产事务。 |
 | `tests/test_storage_hardening.py` | 私有/旧目录、路径逃逸、限量/截断图、并发参考图封顶、快照冲突、文件归属和重分析资产失效。 |
 | `tests/test_xmp_and_schema_hardening.py` | 非空内容、0/50/100% 插值、公共 DTO、XML/RDF、UUID、完整 XMP 和失败恢复。 |
