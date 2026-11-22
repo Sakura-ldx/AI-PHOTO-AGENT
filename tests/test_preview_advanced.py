@@ -94,7 +94,7 @@ def test_post_crop_vignette_darkens_corners_and_keeps_center() -> None:
 
     # Explicit tolerance: the centre pixel may shift by at most 1 level.
     for original, rendered_channel in zip(
-        image.getpixel((80, 60)), rendered.getpixel((80, 60))
+        image.getpixel((80, 60)), rendered.getpixel((80, 60)), strict=True
     ):
         assert abs(original - rendered_channel) <= 1
 
@@ -109,7 +109,7 @@ def test_lens_vignette_darkens_corners_and_keeps_center() -> None:
     assert corner_mean < 108.0
 
     for original, rendered_channel in zip(
-        image.getpixel((80, 60)), rendered.getpixel((80, 60))
+        image.getpixel((80, 60)), rendered.getpixel((80, 60)), strict=True
     ):
         assert abs(original - rendered_channel) <= 1
 
@@ -220,7 +220,7 @@ def test_defringe_desaturates_only_the_purple_band() -> None:
     red_before = image.getpixel((48, 16))
     red_after = rendered.getpixel((48, 16))
     # The red patch is outside the purple hue band and must stay unchanged.
-    for original, result in zip(red_before, red_after):
+    for original, result in zip(red_before, red_after, strict=True):
         assert abs(original - result) <= 1
 
 

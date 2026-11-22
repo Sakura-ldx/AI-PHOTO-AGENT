@@ -14,10 +14,10 @@ BASE_DIR = Path(__file__).resolve().parents[1]
 if str(BASE_DIR) not in sys.path:
     sys.path.insert(0, str(BASE_DIR))
 
-from app.adapters.analysis import MockAnalysisProvider  # noqa: E402
-from app.config import AppSettings  # noqa: E402
-from app.main import create_app  # noqa: E402
-from app.schemas import MAPPING_VERSION  # noqa: E402
+from app.adapters.analysis import MockAnalysisProvider
+from app.config import AppSettings
+from app.main import create_app
+from app.schemas import MAPPING_VERSION
 
 
 def _image_bytes(

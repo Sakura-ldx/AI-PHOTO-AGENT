@@ -7,10 +7,11 @@
 
 from __future__ import annotations
 
-from datetime import datetime
 from typing import Annotated, Literal
+from urllib.parse import urlsplit
 
 from pydantic import (
+    AfterValidator,
     BaseModel,
     ConfigDict,
     Field,
@@ -27,9 +28,9 @@ from app.schemas import (
     ImageFormat,
     ResourceId,
     StyleId,
+    UTCDateTime,
     utc_now,
 )
-
 
 KNOWLEDGE_SUMMARY_VERSION = "photo_learning_summary_v1"
 TAG_DIMENSIONS: tuple[str, ...] = (
@@ -39,6 +40,8 @@ TAG_DIMENSIONS: tuple[str, ...] = (
     "tone",
     "composition",
     "issue",
+    "portrait",
+    "environment",
 )
 TAG_DIMENSION_LABELS: dict[str, str] = {
     "subject": "题材场景",
@@ -47,12 +50,21 @@ TAG_DIMENSION_LABELS: dict[str, str] = {
     "tone": "影调",
     "composition": "构图",
     "issue": "待改善",
+    "portrait": "人像风格",
+    "environment": "环境背景",
 }
 FALLBACK_CATEGORY = "综合"
 DIRECTIONS_PER_SUMMARY = 3
 MAX_SUMMARY_TAGS = 12
 KnowledgeDimension = Literal[
-    "subject", "light", "color", "tone", "composition", "issue"
+    "subject",
+    "light",
+    "color",
+    "tone",
+    "composition",
+    "issue",
+    "portrait",
+    "environment",
 ]
 KnowledgeTagSource = Literal["analysis", "measurement"]
 KnowledgeTagLabel = Annotated[
@@ -63,9 +75,44 @@ ShortText = Annotated[
     str,
     StringConstraints(strip_whitespace=True, min_length=1, max_length=500),
 ]
-UrlText = Annotated[
+
+
+def _validate_local_url(value: str) -> str:
+    """Accept only same-origin absolute paths.
+
+    Knowledge summaries are derived JSON on disk. If one is tampered with, a
+    ``javascript:`` or protocol-relative URL must fail validation rather than
+    reach the browser through a response DTO.
+    """
+
+    if any(
+        character.isspace() or ord(character) < 0x20 or ord(character) == 0x7F
+        for character in value
+    ):
+        raise ValueError("URL must not contain whitespace or control characters")
+    if "\\" in value or not value.startswith("/") or value.startswith("//"):
+        raise ValueError("URL must be a same-origin absolute path")
+    parsed = urlsplit(value)
+    if parsed.scheme or parsed.netloc:
+        raise ValueError("URL must be a same-origin absolute path")
+    return value
+
+
+def _reject_control_characters(value: str) -> str:
+    if any(ord(character) < 0x20 or ord(character) == 0x7F for character in value):
+        raise ValueError("value must be a single line without control characters")
+    return value
+
+
+LocalUrl = Annotated[
     str,
     StringConstraints(strip_whitespace=True, min_length=1, max_length=2048),
+    AfterValidator(_validate_local_url),
+]
+SingleLineText = Annotated[
+    str,
+    StringConstraints(strip_whitespace=True, min_length=1, max_length=240),
+    AfterValidator(_reject_control_characters),
 ]
 
 
@@ -84,13 +131,13 @@ class KnowledgeImage(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    display_url: UrlText
+    display_url: LocalUrl
     width: int = Field(gt=0, le=200_000)
     height: int = Field(gt=0, le=200_000)
     format: ImageFormat
     color_mode: str = Field(min_length=1, max_length=40)
     file_size: int = Field(ge=0)
-    original_filename: str | None = Field(default=None, max_length=240)
+    original_filename: SingleLineText | None = None
     render_source: Literal["original", "embedded_preview"] = "original"
 
 
@@ -105,7 +152,7 @@ class KnowledgeAnalysisSnapshot(BaseModel):
     color_tone_observations: AnalysisItems
 
     @classmethod
-    def from_analysis(cls, analysis: ImageAnalysis) -> "KnowledgeAnalysisSnapshot":
+    def from_analysis(cls, analysis: ImageAnalysis) -> KnowledgeAnalysisSnapshot:
         return cls(
             overall_summary=analysis.overall_summary,
             technical_diagnosis=analysis.technical_diagnosis,
@@ -131,8 +178,25 @@ class EditingDirectionSummary(BaseModel):
     effective_strength: float = Field(ge=0.0, le=1.0)
     verified: bool = True
     warnings: list[ShortText] = Field(default_factory=list)
-    preview_url: UrlText | None = None
+    preview_url: LocalUrl | None = None
     preview_intensity: float | None = Field(default=None, ge=0.0, le=1.0)
+
+
+class KnowledgeManualEdit(BaseModel):
+    """用户主动选择过的一条修图方向（风格 + 强度），用于笔记额外展示。"""
+
+    model_config = ConfigDict(extra="forbid")
+
+    style_id: StyleId
+    style_name: AnalysisTitle
+    intensity: float = Field(ge=0.0, le=1.0)
+    parameters_summary: AnalysisParagraph
+    effective_strength: float = Field(ge=0.0, le=1.0)
+    verified: bool = True
+    warnings: list[ShortText] = Field(default_factory=list)
+    preview_url: LocalUrl | None = None
+    source: Literal["preview", "export"] = "preview"
+    updated_at: UTCDateTime
 
 
 class PhotoLearningSummary(BaseModel):
@@ -151,10 +215,13 @@ class PhotoLearningSummary(BaseModel):
         min_length=DIRECTIONS_PER_SUMMARY, max_length=DIRECTIONS_PER_SUMMARY
     )
     overview: AnalysisParagraph
-    generated_at: datetime = Field(default_factory=utc_now)
+    # Not persisted inside the summary JSON: the workflow fills it from the
+    # photo session on read so a rebuild can never drop the user's choice.
+    manual_edit: KnowledgeManualEdit | None = None
+    generated_at: UTCDateTime = Field(default_factory=utc_now)
 
     @model_validator(mode="after")
-    def _validate_summary(self) -> "PhotoLearningSummary":
+    def _validate_summary(self) -> PhotoLearningSummary:
         if self.id != self.photo_id:
             raise ValueError("学习总结的 id 必须与 photo_id 一致")
         style_ids = [direction.style_id for direction in self.directions]
@@ -195,6 +262,15 @@ class KnowledgeCategoryCount(BaseModel):
     count: int = Field(ge=0)
 
 
+class KnowledgeStyleCount(BaseModel):
+    """修图风格（图片风格）的计数，供知识库「图片风格」目录使用。"""
+
+    model_config = ConfigDict(extra="forbid")
+
+    name: str = Field(min_length=1, max_length=200)
+    count: int = Field(ge=0)
+
+
 class KnowledgeSummaryListItem(BaseModel):
     """知识库列表项：足够渲染卡片，不携带完整参数对象。"""
 
@@ -209,11 +285,11 @@ class KnowledgeSummaryListItem(BaseModel):
     recommended_intensities: list[float] = Field(
         default_factory=list, max_length=DIRECTIONS_PER_SUMMARY
     )
-    preview_url: UrlText | None = None
-    generated_at: datetime
+    preview_url: LocalUrl | None = None
+    generated_at: UTCDateTime
 
     @classmethod
-    def from_summary(cls, summary: PhotoLearningSummary) -> "KnowledgeSummaryListItem":
+    def from_summary(cls, summary: PhotoLearningSummary) -> KnowledgeSummaryListItem:
         preview_url = next(
             (
                 direction.preview_url
@@ -248,6 +324,7 @@ class KnowledgeSummaryListResponse(BaseModel):
     items: list[KnowledgeSummaryListItem] = Field(default_factory=list)
     facets: list[KnowledgeFacet] = Field(default_factory=list)
     primary_categories: list[KnowledgeCategoryCount] = Field(default_factory=list)
+    style_tags: list[KnowledgeStyleCount] = Field(default_factory=list)
 
 
 class KnowledgeOverviewResponse(BaseModel):
@@ -258,6 +335,7 @@ class KnowledgeOverviewResponse(BaseModel):
     total_summaries: int = Field(ge=0)
     covered_categories: int = Field(ge=0)
     average_intensity: float | None = Field(default=None, ge=0.0, le=1.0)
-    latest_generated_at: datetime | None = None
+    latest_generated_at: UTCDateTime | None = None
     facets: list[KnowledgeFacet] = Field(default_factory=list)
     primary_categories: list[KnowledgeCategoryCount] = Field(default_factory=list)
+    style_tags: list[KnowledgeStyleCount] = Field(default_factory=list)

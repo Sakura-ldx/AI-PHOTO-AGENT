@@ -224,14 +224,14 @@ def baseline_corrections(
     shadows = 0
     clipped_shadows = measurements.clipped_shadows_share
     if clipped_shadows > 0.01:
-        shadows += int(round(min(28.0, clipped_shadows * 400.0)))
+        shadows += round(min(28.0, clipped_shadows * 400.0))
     if measurements.deep_shadow_share > 0.25 and measurements.luma.p05 < 10.0:
         shadows += 12.0 if shadows == 0 else 6.0
     shadows = int(_clamp(round(shadows), 0.0, 40.0))
 
     highlights = 0
     if measurements.bright_highlight_share > 0.03:
-        highlights -= int(round(min(30.0, measurements.bright_highlight_share * 300.0)))
+        highlights -= round(min(30.0, measurements.bright_highlight_share * 300.0))
     if measurements.clipped_highlights_share > 0.005:
         highlights -= 20
     highlights = int(_clamp(highlights, -45.0, 0.0))
@@ -239,14 +239,14 @@ def baseline_corrections(
     span = measurements.luma.range_90
     contrast = 0
     if span < 90.0:
-        contrast += int(round((90.0 - span) / 90.0 * 22.0))
+        contrast += round((90.0 - span) / 90.0 * 22.0)
     elif span > 210.0 and measurements.clipped_shadows_share > 0.004:
         contrast -= 8
     contrast = int(_clamp(contrast, -12.0, 25.0))
 
     dehaze = 0
     if measurements.flat_share > 0.3:
-        dehaze = int(round(min(18.0, (measurements.flat_share - 0.3) * 40.0)))
+        dehaze = round(min(18.0, (measurements.flat_share - 0.3) * 40.0))
 
     vibrance = 0
     if measurements.saturation_mean > 160.0:
@@ -258,9 +258,9 @@ def baseline_corrections(
     if measurements.neutral_coverage >= MIN_NEUTRAL_COVERAGE:
         bias = measurements.warm_bias
         if bias > NEUTRAL_RATIO_HIGH:
-            temperature = -int(round(min(20.0, (bias - NEUTRAL_RATIO_HIGH) * 120.0)))
+            temperature = -round(min(20.0, (bias - NEUTRAL_RATIO_HIGH) * 120.0))
         elif 0.0 < bias < NEUTRAL_RATIO_LOW:
-            temperature = int(round(min(20.0, (NEUTRAL_RATIO_LOW - bias) * 120.0)))
+            temperature = round(min(20.0, (NEUTRAL_RATIO_LOW - bias) * 120.0))
 
     return BaselineCorrections(
         exposure_ev=round(exposure_ev, 2),
@@ -292,7 +292,7 @@ def exposure_limit(measurements: ImageMeasurements) -> float:
 def strength_ladder() -> tuple[float, ...]:
     """Descending strengths tried by the adaptive fit (1.0, 0.9, ... 0.3)."""
 
-    steps = int(round((1.0 - MIN_STRENGTH) / STRENGTH_STEP))
+    steps = round((1.0 - MIN_STRENGTH) / STRENGTH_STEP)
     return tuple(round(1.0 - STRENGTH_STEP * index, 2) for index in range(steps + 1))
 
 
@@ -481,7 +481,7 @@ def resolve_parameters(
         candidate = parameters.model_copy(update=updates)
         try:
             candidate_rendered = observer(candidate)
-        except Exception as exc:  # pragma: no cover - defensive, renderer owned
+        except Exception as exc:  # noqa: BLE001 - renderer is optional verification
             warnings.append(f"回渲染校验失败：{type(exc).__name__}")
             break
         blocked = guard_failures(measurements, candidate_rendered)
@@ -537,7 +537,7 @@ def _fit_strength(
         )
         try:
             rendered = observer(parameters)
-        except Exception as exc:  # pragma: no cover - defensive, renderer owned
+        except Exception as exc:  # noqa: BLE001 - renderer is optional verification
             warnings.append(f"回渲染校验失败：{type(exc).__name__}")
             return strength, parameters, None, ()
 
@@ -598,7 +598,7 @@ def _enforce_guards(
             break
         try:
             candidate_rendered = observer(candidate)
-        except Exception as exc:  # pragma: no cover - defensive, renderer owned
+        except Exception as exc:  # noqa: BLE001 - renderer is optional verification
             warnings.append(f"回渲染校验失败：{type(exc).__name__}")
             break
         current_parameters, current_rendered = candidate, candidate_rendered
@@ -686,7 +686,7 @@ def _ensure_visible(
                 continue
             try:
                 candidate_rendered = observer(candidate)
-            except Exception as exc:  # pragma: no cover - defensive, renderer owned
+            except Exception as exc:  # noqa: BLE001 - renderer is optional verification
                 warnings.append(f"回渲染校验失败：{type(exc).__name__}")
                 return best_parameters, best_rendered, boosted
             if guard_failures(measurements, candidate_rendered):
@@ -703,7 +703,7 @@ def _ensure_visible(
                     continue
                 try:
                     candidate_rendered = observer(candidate)
-                except Exception as exc:  # pragma: no cover - renderer owned
+                except Exception as exc:  # noqa: BLE001 - renderer is optional verification
                     warnings.append(f"回渲染校验失败：{type(exc).__name__}")
                     return best_parameters, best_rendered, boosted
                 if guard_failures(measurements, candidate_rendered):
@@ -744,7 +744,7 @@ def make_render_observer(
 
     try:
         from app.services.preview import render_image
-    except Exception:  # pragma: no cover - renderer always present in app builds
+    except Exception:  # noqa: BLE001 - renderer is optional during resolver import
         return None
 
     cache: list[Image.Image] = []

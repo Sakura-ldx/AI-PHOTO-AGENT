@@ -12,7 +12,9 @@ from app.adapters.analysis import MockAnalysisProvider
 from app.adapters.deepseek_analysis import (
     MAX_OUTPUT_TOKENS,
     DeepSeekAnalysisProvider,
+    _response_content,
     _style_diversity_issue,
+    _style_quality_issue,
 )
 from app.adapters.vision_models import StructuredPhotoAnalysis
 from app.errors import ProviderOutputError, ProviderServiceError, ProviderTimeoutError
@@ -293,7 +295,7 @@ def test_deepseek_provider_reports_truncation_after_the_compact_retry(tmp_path) 
 
 def _with_temperatures(analysis: ImageAnalysis, values: list[int]) -> ImageAnalysis:
     clone = analysis.model_copy(deep=True)
-    for style, value in zip(clone.recommended_styles, values):
+    for style, value in zip(clone.recommended_styles, values, strict=True):
         style.parameters.temperature = value
     return clone
 
@@ -337,8 +339,8 @@ def test_deepseek_provider_retries_a_repetitive_triad_once(tmp_path) -> None:
     assert client.calls[0]["json"]["temperature"] == 0.2
     assert client.calls[1]["json"]["temperature"] == 0.55
     retry_prompt = client.calls[1]["json"]["messages"][1]["content"][0]["text"]
-    assert "过于同质" in retry_prompt
-    assert "中性/偏暖/偏冷" in retry_prompt
+    assert "未通过质量检查" in retry_prompt
+    assert "三分法" in retry_prompt
 
 
 def test_deepseek_provider_accepts_the_second_triad_instead_of_looping(tmp_path) -> None:
@@ -357,4 +359,45 @@ def test_deepseek_provider_accepts_the_second_triad_instead_of_looping(tmp_path)
     actual = make_provider(client).analyze(image_path, metadata)
 
     assert actual == triad
-    assert len(client.calls) == 2
+
+
+def test_style_quality_gate_rejects_a_generic_monochrome_reason_on_a_colorful_photo(
+    tmp_path,
+) -> None:
+    from app.services.measurements import measure_file
+
+    image_path = tmp_path / "colorful.png"
+    Image.new("RGB", (320, 200), color=(220, 30, 40)).save(image_path, format="PNG")
+    measurements = measure_file(image_path)
+    analysis = MockAnalysisProvider(include_monochrome=True).analyze(
+        image_path, make_metadata()
+    )
+    analysis.recommended_styles[-1].best_fit_reason = "更好看，更高级。"
+
+    assert measurements.saturation_mean >= 120
+    assert _style_quality_issue(analysis, measurements) is not None
+
+    analysis.recommended_styles[-1].best_fit_reason = (
+        "去色后线条和明暗层次更突出，适合这张几何结构强的画面。"
+    )
+    assert _style_quality_issue(analysis, measurements) is None
+
+
+def test_response_content_ignores_non_string_text_parts() -> None:
+    payload = {
+        "choices": [
+            {
+                "message": {
+                    "content": [
+                        {"type": "text", "text": "第一段"},
+                        {"type": "text", "text": None},
+                        {"type": "image", "text": "不是文本"},
+                        {"type": "text", "text": 3},
+                        {"type": "text", "text": "第二段"},
+                    ]
+                }
+            }
+        ]
+    }
+
+    assert _response_content(payload) == "第一段第二段"

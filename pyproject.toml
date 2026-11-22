@@ -1,0 +1,43 @@
+[tool.ruff]
+target-version = "py312"
+extend-exclude = [
+    ".venv",
+    "data",
+    "exports",
+    "generated",
+    "uploads",
+]
+
+[tool.ruff.lint]
+# Keep the gate focused on correctness, imports, security-adjacent exception
+# handling and modern syntax. Formatting-only rules are intentionally excluded.
+select = [
+    "E4",
+    "E7",
+    "E9",
+    "F",
+    "I",
+    "B",
+    "BLE",
+    "UP",
+    "RUF",
+    "PLW",
+    "PLC",
+    "ISC",
+    "FURB",
+]
+ignore = [
+    # Scripts intentionally extend sys.path before importing project modules.
+    "E402",
+    # Lazy imports keep optional/test-only dependencies out of module import time.
+    "PLC0415",
+    # Test lambdas are clearer inline; not a correctness issue.
+    "PLW0108",
+    # Chinese full-width punctuation is intentional in user-facing strings
+    # and documentation; the ASCII "fix" would change copy.
+    "RUF001",
+    "RUF002",
+    "RUF003",
+    # Tests intentionally exercise regular-expression match patterns.
+    "RUF043",
+]

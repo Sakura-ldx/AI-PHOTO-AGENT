@@ -76,6 +76,21 @@ DeepSeek / OpenAI / Codex 三个适配器里把测量块插到 prompt 最前（�
 - 预览成功后网页显示 **`实际生效：曝光 +1.50 EV · 对比 +12 · …`**，直接暴露真实参数
   （此前 `index.html:697` 把 `result.parameters` 整个丢掉了）。
 
+### 2.6 提示词 v6：黑白条件化与系列一致性
+
+- `PHOTO_PROMPT_VERSION = "photo-analysis-v6"`；风格数量仍固定 3 套，但删除“至少一套以
+  非白平衡维度为主”的强制项，避免为凑第三套硬塞黑白。黑白只在明暗/光影、线条/几何、
+  纹理/质感、形体/剪影、色彩干扰主体、极简/舞台硬光等场景推荐；花卉、美食、日落、霓虹、
+  彩妆、鲜艳服饰等以色彩为主要信息的照片保持彩色。黑白必须通过 `black_and_white`
+  高级参数表达，`best_fit_reason` 要写具体受益点。
+- 分析前用 `app/services/series.py` 的 64-bit dHash + 宽高比/亮度/饱和度签名，与最近
+  已分析的 `photo_analysis_v2` 照片匹配。近似重复的其他上传为 `locked`，精确复用 3 套
+  id/name/参数/顺序；同 session 重分析、连拍前缀或强视觉相似为 `aligned`，沿用方向但按
+  当前图重算参数；弱相似为 `context`。参考系列没有黑白时，`aligned` 会过滤本次黑白并从
+  参考的彩色风格补齐到 3 套。
+- 旧分析不参与锁定/策略；系列匹配与签名缓存均为 best-effort，失败只记日志，不影响分析
+  与保存。Web 与 DSH 插件在诊断卡显示 `series.note`。
+
 ## 3. 实测结果
 
 ### 3.1 预览提灰（同一张照片，`uploads/<session-id>/display.jpg`）

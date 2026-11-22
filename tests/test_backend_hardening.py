@@ -22,6 +22,7 @@ from app.adapters import deepseek_analysis as deepseek_module
 from app.adapters.analysis import MockAnalysisProvider
 from app.adapters.deepseek_analysis import DeepSeekAnalysisProvider
 from app.config import AppSettings
+from app.errors import ApplicationError
 from app.launcher import server_url
 from app.main import _xmp_content_disposition, create_app
 from app.schemas import (
@@ -31,8 +32,8 @@ from app.schemas import (
     build_advanced_from_overrides,
 )
 from app.services.analysis_tasks import AnalysisTaskRegistry
-from app.services.lightroom_develop import build_lightroom_develop_settings
 from app.services.lightroom_bridge import LightroomBridge
+from app.services.lightroom_develop import build_lightroom_develop_settings
 from app.services.parameter_specs import (
     SPECS_BY_KEY,
     encode_for_lightroom,
@@ -86,7 +87,6 @@ def test_registry_bounds_total_threads_even_when_tasks_are_cancelled() -> None:
 
     def slow(_report, _cancelled):
         release.wait(5.0)
-        return None
 
     first = registry.submit("a" * 32, slow)
     registry.cancel(first.task_id)
@@ -147,7 +147,7 @@ def test_server_url_uses_the_loopback_alias_for_wildcard_hosts() -> None:
 
 
 def test_launcher_publishes_the_configured_port(monkeypatch) -> None:
-    import app.launcher as launcher
+    from app import launcher
 
     monkeypatch.delenv("AI_PHOTO_AGENT_SERVER_URL", raising=False)
     calls: dict[str, object] = {}
@@ -159,7 +159,7 @@ def test_launcher_publishes_the_configured_port(monkeypatch) -> None:
 
 
 def test_launcher_keeps_an_explicit_server_url(monkeypatch) -> None:
-    import app.launcher as launcher
+    from app import launcher
 
     monkeypatch.setenv("AI_PHOTO_AGENT_SERVER_URL", "http://127.0.0.1:9999")
     monkeypatch.setattr(launcher.uvicorn, "run", lambda *a, **k: None)
@@ -253,6 +253,25 @@ def test_browser_hardening_headers_are_set(tmp_path: Path) -> None:
     assert response.headers["x-frame-options"] == "DENY"
     assert response.headers["referrer-policy"] == "no-referrer"
     assert response.headers["cross-origin-resource-policy"] == "same-origin"
+    policy = response.headers["content-security-policy"]
+    assert "default-src 'self'" in policy
+    assert "object-src 'none'" in policy
+    assert "frame-ancestors 'none'" in policy
+
+
+def test_unhandled_application_error_returns_generic_detail(tmp_path: Path) -> None:
+    application = create_app(storage=FileStorage(tmp_path))
+
+    @application.get("/test/application-error")
+    def raise_application_error() -> None:
+        raise ApplicationError("secret internal detail")
+
+    client = TestClient(application)
+    response = client.get("/test/application-error")
+
+    assert response.status_code == 500
+    assert response.json() == {"detail": "Application request failed."}
+    assert "secret internal detail" not in response.text
 
 
 def test_xmp_filename_strips_header_control_characters() -> None:

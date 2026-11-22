@@ -12,7 +12,6 @@ from PIL import Image, ImageCms, ImageOps
 from app.errors import ProviderServiceError
 from app.imaging import flatten_to_rgb, normalize_to_8bit
 
-
 LOGGER = logging.getLogger(__name__)
 MODEL_IMAGE_MAX_SIZE = (2048, 2048)
 MODEL_IMAGE_JPEG_QUALITY = 88

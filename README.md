@@ -31,17 +31,40 @@ result to Lightroom Classic for a real preview.
 10. Long analyses can run in the background through `/api/photos/{id}/analyze/jobs` with
     stage progress and cancellation (bounded to 8 runners / 16 live threads per process).
 11. Send the current style straight to Lightroom, install the plug-in from the UI, and
-    inspect bridge status; full-screen lightbox supports anchored wheel zoom and panning.
+    inspect bridge status; the knowledge-base wall and note overlay keep browsing and
+    before/after comparison within the same page.
 12. **Phase 2 learning summaries / knowledge base.** Every successful analysis also
     persists a learning summary: the image itself (thumbnail + metadata), the analysis
     snapshot, all three editing directions with parameter summaries, an intelligently
     recommended intensity whose preview is rendered and verified through the preview
-    pipeline, and deterministic classification tags. The knowledge base can be browsed,
-    filtered by tag dimension/category, and rebuilt per photo through `/api/knowledge/*`;
-    the summaries are regenerated automatically when a photo is re-analyzed. The page has
-    two top-level views — editing studio and knowledge base — and the top navigation
-    switches between them in both directions; the second tab of the DeepSeek Harness
-    plugin panel shows the same knowledge base.
+    pipeline, and deterministic classification tags across eight dimensions
+    (subject, light, color, tone, composition, issues, portrait style, environment).
+    The knowledge base groups photos into a collapsible file-directory tree by tag and
+    style and shows a compact wall of original photos; clicking a photo opens a
+    social-post-style note overlay that shows the original next to the currently selected
+    edited preview, plus tags, analysis summary and all three directions. If the photo
+    already has a manual style/intensity choice recorded from the web UI, the overlay also
+    shows that chosen direction (style, intensity, parameter summary, verification status
+    and preview). A search box supports approximate tag/style/category/filename
+    matching (substring + similarity) and combines with directory filters. Summaries can
+    be rebuilt per photo through `/api/knowledge/*` and are regenerated automatically
+    when a photo is re-analyzed. The page has two top-level views — editing studio and
+    knowledge base — and the top navigation switches between them in both directions;
+    the second tab of the DeepSeek Harness plugin panel shows the same knowledge base.
+13. **Conditional monochrome.** Analysis still returns exactly three styles, but black and
+    white is no longer forced into every result. The prompt recommends it only when tonal
+    structure, lines/geometry, texture, body shape/silhouette, a distracting color field,
+    or minimal stage light genuinely benefits; color-critical subjects (flowers, food,
+    sunsets, neon, makeup, vivid clothing) keep a color treatment. A monochrome style must
+    use the real `black_and_white` parameter and explain the concrete benefit.
+14. **Series consistency.** Before analysis, a lightweight dHash plus aspect/luma/
+    saturation signature is compared with previously analyzed current-version photos.
+    Near-duplicate uploads reuse the previous three style IDs, names, parameters, and
+    order (`locked`); same-shoot frames or strong visual matches keep a similar direction
+    while parameters are recalculated for the current photo (`aligned`); weak matches are
+    context only. If the series has no monochrome style, the current photo does not add
+    one. The note appears in the web UI and the DSH plugin analysis card; legacy analyses
+    are never used as lock references.
 
 ## Why diagnosis and styles are no longer fixed
 
@@ -191,6 +214,7 @@ with 200 responses. The full analysis is saved at
 - [Upload orientation and XMP download fixes (Chinese)](docs/UPLOAD_ORIENTATION_XMP.zh-CN.md)
 - [Lightroom plug-in and bridge guide (Chinese)](docs/LIGHTROOM_PLUGIN.zh-CN.md)
 - [Current code index and architecture (Chinese)](docs/CURRENT_CODEBASE_INDEX.zh-CN.md)
+- [Architecture and reliability rules for learning summaries / series (Chinese)](docs/ARCHITECTURE_AND_HARDENING.zh-CN.md)
 - [Project goal (Chinese)](docs/PROJECT_GOAL.zh-CN.md)
 - [Product requirements (Chinese)](docs/PRODUCT_REQUIREMENTS.zh-CN.md)
 - [MVP roadmap (Chinese)](docs/MVP_ROADMAP.zh-CN.md)

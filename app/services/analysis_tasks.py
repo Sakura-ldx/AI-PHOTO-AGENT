@@ -5,6 +5,7 @@ import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from threading import Event, Lock, Thread
+from typing import Protocol
 from uuid import uuid4
 
 from app.errors import (
@@ -14,7 +15,6 @@ from app.errors import (
     ProviderTimeoutError,
 )
 from app.schemas import AnalysisTaskStage, AnalysisTaskStatus, ImageAnalysis
-
 
 LOGGER = logging.getLogger(__name__)
 
@@ -29,13 +29,27 @@ ANALYSIS_TASK_RETENTION_SECONDS = 3600.0
 # thread count without bound.
 ANALYSIS_TASK_MAX_RUNNERS = 8
 ANALYSIS_TASK_MAX_IN_FLIGHT = ANALYSIS_TASK_MAX_RUNNERS * 2
-ACTIVE_STAGES: frozenset[str] = frozenset(
+ACTIVE_STAGES: frozenset[AnalysisTaskStage] = frozenset(
     {"queued", "measuring", "provider", "validating"}
 )
 
-ProgressReporter = Callable[[str, str], None]
+ProgressReporter = Callable[[AnalysisTaskStage, str], None]
 CancellationCheck = Callable[[], bool]
 TaskRunner = Callable[[ProgressReporter, CancellationCheck], ImageAnalysis]
+
+
+class AnalysisWorkflow(Protocol):
+    """The slice of ``PhotoWorkflow`` the task registry depends on."""
+
+    def analyze_with_progress(
+        self,
+        photo_id: str,
+        provider_name: str = "default",
+        *,
+        progress: ProgressReporter | None = None,
+        cancelled: CancellationCheck | None = None,
+    ) -> ImageAnalysis: ...
+
 
 _BUSY_MESSAGE = "当前分析任务过多，请等待现有任务结束后重试。"
 
@@ -46,7 +60,6 @@ _FAILURE_MESSAGES: dict[type[Exception], str] = {
         "模型返回的内容不完整（多半是输出被长度限制截断），已自动重试过一次；"
         "仍失败请再点一次分析，或换一张更简单的照片试试。"
     ),
-
 }
 
 
@@ -197,9 +210,20 @@ class AnalysisTaskRegistry:
                 return
             self._closed = True
             tasks = list(self._tasks.values())
-        for task in tasks:
-            if task.is_active:
+            now = time.monotonic()
+            cancelled: list[AnalysisTask] = []
+            for task in tasks:
+                if not task.is_active:
+                    continue
+                task.cancel_requested = True
                 task.cancel_event.set()
+                task.stage = "cancelled"
+                task.progress_hint = "已取消"
+                task.error = None
+                task.finished_at = now
+                cancelled.append(task)
+        for task in cancelled:
+            self._release_slot(task)
 
     def _reserve_slot(self, task: AnalysisTask) -> bool:
         with self._lock:
@@ -241,11 +265,11 @@ class AnalysisTaskRegistry:
             self._in_flight = max(0, self._in_flight - 1)
 
     def _run(self, task: AnalysisTask, runner: TaskRunner) -> None:
-        def report(stage: str, hint: str) -> None:
+        def report(stage: AnalysisTaskStage, hint: str) -> None:
             with self._lock:
                 if task.cancel_requested:
                     return
-                task.stage = stage  # type: ignore[assignment]
+                task.stage = stage
                 task.progress_hint = hint
                 task.stage_started_at = time.monotonic()
 
@@ -308,14 +332,14 @@ def _failure_message(exc: Exception) -> str:
 
 def submit_analysis(
     registry: AnalysisTaskRegistry,
-    workflow: object,
+    workflow: AnalysisWorkflow,
     photo_id: str,
     provider_name: str = "default",
 ) -> AnalysisTask:
     """Queue ``PhotoWorkflow.analyze_with_progress`` on the registry."""
 
     def runner(report: ProgressReporter, cancelled: CancellationCheck) -> ImageAnalysis:
-        return workflow.analyze_with_progress(  # type: ignore[attr-defined]
+        return workflow.analyze_with_progress(
             photo_id,
             provider_name,
             progress=report,

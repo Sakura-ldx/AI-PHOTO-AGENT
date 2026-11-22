@@ -8,8 +8,9 @@ This module therefore provides:
 
 1. :func:`classify_analysis` maps keyword hits from the analysis text plus
    histogram measurements into the fixed tag vocabulary defined in
-   :mod:`app.knowledge_schemas` (6 dimensions, at most 2 tags per dimension and
-   8 tags in total, primary category taken from the first subject tag).
+   :mod:`app.knowledge_schemas` (8 dimensions, of which the six measurable ones
+   can be filled from the histogram; at most 2 tags per dimension and 8 tags in
+   total, primary category taken from the first subject tag).
 2. :func:`recommend_intensity` starts from a 0.75 baseline and moves it up or
    down according to exposure key, tonal range, flatness, clipping and how
    strong the style parameters already are, then clamps to [0.4, 1.0] on a 0.05
@@ -42,6 +43,7 @@ from app.services.edit_resolver import (
 from app.services.measurements import ImageMeasurements
 
 __all__ = [
+    "BASELINE_RECOMMENDED_INTENSITY",
     "FALLBACK_CATEGORY",
     "MAX_RECOMMENDED_INTENSITY",
     "MAX_TAGS_PER_DIMENSION",
@@ -49,7 +51,6 @@ __all__ = [
     "MIN_RECOMMENDED_INTENSITY",
     "OPPOSITE_LABEL_PAIRS",
     "RECOMMENDED_INTENSITY_STEP",
-    "BASELINE_RECOMMENDED_INTENSITY",
     "SUMMARY_TAG_RULES",
     "TAG_LABELS_BY_DIMENSION",
     "IntensityRecommendation",
@@ -75,7 +76,7 @@ BASELINE_RECOMMENDED_INTENSITY = 0.75
 #: the schema allows 12 tags, but the classifier keeps the list short enough to
 #: read, which also leaves room for other producers to append tags later.
 MAX_TAGS_PER_DIMENSION = 2
-MAX_TAGS_TOTAL = 8
+MAX_TAGS_TOTAL = 12
 
 
 @dataclass(frozen=True, slots=True)
@@ -186,6 +187,40 @@ ISSUE_LABELS: tuple[str, ...] = (
     "过饱和",
     "白平衡异常",
 )
+#: How the person is framed and lit. The labels deliberately avoid repeating
+#: subject words such as "人像" so a knowledge-base filter never has to guess
+#: which dimension a bare label came from.
+PORTRAIT_LABELS: tuple[str, ...] = (
+    "特写",
+    "半身像",
+    "全身像",
+    "环境人像",
+    "棚拍",
+    "生活感人像",
+    "情绪人像",
+    "集体照",
+    "儿童人像",
+    "复古人像",
+    "时尚人像",
+    "逆光人像",
+)
+#: Where the photograph was taken / what surrounds the subject. Words that also
+#: exist as subject labels ("街头", "夜景", "室内") are suffixed here so
+#: (dimension, label) pairs stay unambiguous in the knowledge-base facets.
+ENVIRONMENT_LABELS: tuple[str, ...] = (
+    "室内环境",
+    "户外环境",
+    "城市环境",
+    "自然环境",
+    "海岸",
+    "森林",
+    "山野",
+    "街头环境",
+    "极简背景",
+    "纯色背景",
+    "虚化背景",
+    "夜景环境",
+)
 
 TAG_LABELS_BY_DIMENSION: dict[str, tuple[str, ...]] = {
     "subject": SUBJECT_LABELS,
@@ -194,6 +229,8 @@ TAG_LABELS_BY_DIMENSION: dict[str, tuple[str, ...]] = {
     "tone": TONE_LABELS,
     "composition": COMPOSITION_LABELS,
     "issue": ISSUE_LABELS,
+    "portrait": PORTRAIT_LABELS,
+    "environment": ENVIRONMENT_LABELS,
 }
 
 
@@ -1063,6 +1100,321 @@ SUMMARY_TAG_RULES: tuple[tuple[KnowledgeDimension, str, tuple[str, ...]], ...] =
             "incorrect white balance",
         ),
     ),
+    # ---------------------------------------------------------------- 人像风格
+    (
+        "portrait",
+        "特写",
+        (
+            "特写",
+            "近景特写",
+            "面部特写",
+            "close-up",
+            "closeup",
+            "close up",
+        ),
+    ),
+    (
+        "portrait",
+        "半身像",
+        (
+            "半身像",
+            "半身",
+            "half-body",
+            "half body",
+            "waist-up",
+            "waist up",
+        ),
+    ),
+    (
+        "portrait",
+        "全身像",
+        (
+            "全身像",
+            "全身照",
+            "全身",
+            "full-body",
+            "full body",
+            "full-length",
+            "full length",
+        ),
+    ),
+    (
+        "portrait",
+        "环境人像",
+        (
+            "环境人像",
+            "环境肖像",
+            "environmental portrait",
+            "environmental portraiture",
+        ),
+    ),
+    (
+        "portrait",
+        "棚拍",
+        (
+            "棚拍",
+            "棚内拍摄",
+            "摄影棚",
+            "studio portrait",
+            "studio shot",
+            "studio photography",
+        ),
+    ),
+    (
+        "portrait",
+        "生活感人像",
+        (
+            "生活感",
+            "生活化人像",
+            "日常人像",
+            "lifestyle portrait",
+            "lifestyle photo",
+            "lifestyle photography",
+        ),
+    ),
+    (
+        "portrait",
+        "情绪人像",
+        (
+            "情绪",
+            "情绪人像",
+            "情绪感",
+            "情绪肖像",
+            "氛围人像",
+            "moody portrait",
+            "emotional portrait",
+            "mood portrait",
+        ),
+    ),
+    (
+        "portrait",
+        "集体照",
+        (
+            "集体照",
+            "合影",
+            "合照",
+            "群像",
+            "group photo",
+            "group portrait",
+            "group shot",
+        ),
+    ),
+    (
+        "portrait",
+        "儿童人像",
+        (
+            "儿童人像",
+            "儿童摄影",
+            "亲子照",
+            "宝宝",
+            "小孩",
+            "孩子",
+            "child portrait",
+            "children portrait",
+            "kids portrait",
+            "child photography",
+        ),
+    ),
+    (
+        "portrait",
+        "复古人像",
+        (
+            "复古人像",
+            "复古风",
+            "怀旧人像",
+            "vintage portrait",
+            "retro portrait",
+        ),
+    ),
+    (
+        "portrait",
+        "时尚人像",
+        (
+            "时尚人像",
+            "时尚大片",
+            "时装大片",
+            "时尚写真",
+            "fashion portrait",
+            "fashion photography",
+            "fashion editorial",
+            "editorial portrait",
+        ),
+    ),
+    (
+        "portrait",
+        "逆光人像",
+        (
+            "逆光人像",
+            "逆光肖像",
+            "backlit portrait",
+            "backlight portrait",
+            "silhouette portrait",
+        ),
+    ),
+    # ---------------------------------------------------------------- 环境背景
+    (
+        "environment",
+        "室内环境",
+        (
+            "室内环境",
+            "室内拍摄",
+            "室内场景",
+            "室内",
+            "indoor",
+            "indoors",
+            "interior shot",
+        ),
+    ),
+    (
+        "environment",
+        "户外环境",
+        (
+            "户外环境",
+            "户外拍摄",
+            "室外环境",
+            "户外",
+            "室外",
+            "outdoor",
+            "outdoors",
+            "outdoor scene",
+        ),
+    ),
+    (
+        "environment",
+        "城市环境",
+        (
+            "城市环境",
+            "城市背景",
+            "城市",
+            "都市",
+            "urban",
+            "cityscape",
+            "downtown",
+        ),
+    ),
+    (
+        "environment",
+        "自然环境",
+        (
+            "自然环境",
+            "自然背景",
+            "大自然",
+            "nature",
+            "natural setting",
+            "natural background",
+        ),
+    ),
+    (
+        "environment",
+        "海岸",
+        (
+            "海岸",
+            "海边",
+            "海滩",
+            "海滨",
+            "seaside",
+            "coast",
+            "coastal",
+            "beach",
+        ),
+    ),
+    (
+        "environment",
+        "森林",
+        (
+            "森林",
+            "树林",
+            "林地",
+            "forest",
+            "woodland",
+            "woods",
+        ),
+    ),
+    (
+        "environment",
+        "山野",
+        (
+            "山野",
+            "山地",
+            "山谷",
+            "山景",
+            "山脉",
+            "mountain",
+            "mountains",
+            "mountainous",
+            "hill",
+            "hills",
+        ),
+    ),
+    (
+        "environment",
+        "街头环境",
+        (
+            "街头环境",
+            "街头",
+            "街拍",
+            "街道",
+            "street",
+            "street photography",
+            "street scene",
+            "streetscape",
+        ),
+    ),
+    (
+        "environment",
+        "极简背景",
+        (
+            "极简背景",
+            "极简",
+            "简约背景",
+            "干净背景",
+            "minimal",
+            "minimalist",
+            "minimal background",
+            "clean background",
+        ),
+    ),
+    (
+        "environment",
+        "纯色背景",
+        (
+            "纯色背景",
+            "纯白背景",
+            "纯色",
+            "白墙",
+            "plain background",
+            "solid background",
+            "white background",
+            "seamless background",
+        ),
+    ),
+    (
+        "environment",
+        "虚化背景",
+        (
+            "虚化背景",
+            "背景虚化",
+            "浅景深",
+            "大光圈",
+            "bokeh",
+            "blurred background",
+            "background blur",
+            "shallow depth of field",
+        ),
+    ),
+    (
+        "environment",
+        "夜景环境",
+        (
+            "夜景环境",
+            "夜景",
+            "夜色",
+            "夜晚",
+            "night scene",
+            "nightscape",
+            "night photography",
+        ),
+    ),
 )
 
 
@@ -1145,14 +1497,16 @@ _ASCII_KEYWORD_PATTERNS: dict[str, re.Pattern[str]] = {
 
 #: Labels of the same dimension that must never describe one photograph together.
 #: The analysis text is written before the measurements are known, so it can
-#: hedge ("偏暖或偏冷", "加强对比") while the histogram only speaks for one side.
-#: ("高光溢出", "暗部死黑") is deliberately absent: a bright window and a dark
-#: foreground can both be clipped in the same frame, so those two may coexist.
+#: hedge ("偏暖或偏冷", "加强对比", "室内或户外") while the histogram only speaks
+#: for one side. ("高光溢出", "暗部死黑") is deliberately absent: a bright window
+#: and a dark foreground can both be clipped in the same frame, so those two may
+#: coexist.
 OPPOSITE_LABEL_PAIRS: dict[KnowledgeDimension, tuple[tuple[str, str], ...]] = {
     "color": (("暖色", "冷色"), ("高饱和", "低饱和")),
     "tone": (("高调", "低调"), ("高对比", "低对比")),
     "composition": (("横幅", "竖幅"),),
     "issue": (("曝光不足", "曝光过度"),),
+    "environment": (("室内环境", "户外环境"),),
 }
 
 
@@ -1214,9 +1568,42 @@ def classify_analysis(
         if len(bucket) < MAX_TAGS_PER_DIMENSION:
             bucket.append(tag)
 
+    # First give every dimension one tag, then spend the remaining budget on a
+    # second tag. The priority list puts the directory-oriented dimensions
+    # (portrait / environment / composition) ahead of the histogram-heavy ones,
+    # so a portrait photo does not end up with a rich tone but an empty
+    # "人像风格" folder. A plain flat cut would drop the trailing dimensions
+    # entirely whenever the text is rich.
+    priority = (
+        "subject",
+        "portrait",
+        "environment",
+        "composition",
+        "light",
+        "color",
+        "tone",
+        "issue",
+    )
+    take: dict[str, int] = {}
+    budget = MAX_TAGS_TOTAL
+    for dimension in TAG_DIMENSIONS:
+        if buckets[dimension] and budget > 0:
+            take[dimension] = 1
+            budget -= 1
+        else:
+            take[dimension] = 0
+    for dimension in priority:
+        if budget <= 0:
+            break
+        if len(buckets[dimension]) > take.get(dimension, 0):
+            take[dimension] = take.get(dimension, 0) + 1
+            budget -= 1
+
     ordered = tuple(
-        tag for dimension in TAG_DIMENSIONS for tag in buckets[dimension]
-    )[:MAX_TAGS_TOTAL]
+        tag
+        for dimension in TAG_DIMENSIONS
+        for tag in buckets[dimension][: take[dimension]]
+    )
     primary_category = next(
         (tag.label for tag in ordered if tag.dimension == "subject"),
         FALLBACK_CATEGORY,
@@ -1450,7 +1837,7 @@ def _style_strength(style: EditingStyle) -> tuple[float, str, str]:
 def _format_style_value(field: str, value: float) -> str:
     if field == "exposure":
         return f"{value:+.2f} EV"
-    return f"{int(round(value)):+d}"
+    return f"{round(value):+d}"
 
 
 def _quantize_intensity(score: float) -> float:

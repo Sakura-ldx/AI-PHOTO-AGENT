@@ -297,7 +297,7 @@ def _build_tonal_lut(parameters: EditingParametersV1) -> list[int]:
         previous = pre_curve_levels[index]
 
     lut = [
-        max(0, min(255, int(round(_tone_curve_value(parameters.tone_curve, level)))))
+        max(0, min(255, round(_tone_curve_value(parameters.tone_curve, level))))
         for level in pre_curve_levels
     ]
     # Hard requirement: the rendered LUT never lifts true black.
@@ -863,7 +863,7 @@ def _build_curve_lut(points: list[ToneCurvePoint]) -> list[int]:
         else:
             ratio = max(0.0, min(1.0, (level - x0) / (x1 - x0)))
             value = y0 + (y1 - y0) * ratio
-        lut.append(max(0, min(255, int(round(value)))))
+        lut.append(max(0, min(255, round(value))))
     return lut
 
 
@@ -880,12 +880,13 @@ def _apply_channel_curves(
     channels: list[Image.Image] = []
     changed = False
     for channel, curve in zip(image.split(), curves, strict=True):
+        processed = channel
         if curve is not None and not _curve_is_identity(curve):
             lut = _build_curve_lut(curve)
             if any(value != level for level, value in enumerate(lut)):
-                channel = channel.point(lut)
+                processed = channel.point(lut)
                 changed = True
-        channels.append(channel)
+        channels.append(processed)
     if not changed:
         return image
     return Image.merge("RGB", channels)
@@ -918,7 +919,7 @@ def _gray_mixer_lut(advanced: AdvancedParameters) -> list[int]:
         x1, y1 = anchors[segment + 1]
         ratio = (hue - x0) / (x1 - x0)
         value = y0 + (y1 - y0) * ratio
-        lut.append(max(1, min(255, 128 + int(round(value / 100.0 * 127.0)))))
+        lut.append(max(1, min(255, 128 + round(value / 100.0 * 127.0))))
     return lut
 
 
@@ -1123,7 +1124,7 @@ def _grain_shape_lut(roughness: int, amount: int) -> list[int]:
     for level in range(256):
         signed = (level - 128) / 127.0
         shaped = math.copysign(abs(signed) ** gamma, signed)
-        lut.append(max(0, min(255, 128 + int(round(shaped * amplitude)))))
+        lut.append(max(0, min(255, 128 + round(shaped * amplitude))))
     return lut
 
 

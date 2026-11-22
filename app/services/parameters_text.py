@@ -8,7 +8,12 @@ once instead of drifting between JavaScript and Lua copies.
 from __future__ import annotations
 
 from app.schemas import EditingParametersV1
-from app.services.parameter_specs import GROUPS, PARAMETER_SPECS, SPECS_BY_KEY, is_neutral
+from app.services.parameter_specs import (
+    GROUPS,
+    PARAMETER_SPECS,
+    SPECS_BY_KEY,
+    is_neutral,
+)
 
 SCALAR_FIELDS: tuple[tuple[str, str, str, int], ...] = (
     ("exposure", "曝光", " EV", 2),
@@ -39,7 +44,7 @@ GROUP_TITLES: dict[str, str] = {
 
 def _number(value: float, digits: int) -> str:
     if digits <= 0:
-        return f"{int(round(value)):+d}"
+        return f"{round(value):+d}"
     return f"{value:+.{digits}f}"
 
 
@@ -98,11 +103,11 @@ def describe_parameters(parameters: EditingParametersV1) -> str:
     if _grading_used(parameters):
         parts.append("色彩分级")
     if parameters.sharpening.amount:
-        parts.append(f"锐化 {int(round(parameters.sharpening.amount))}")
+        parts.append(f"锐化 {round(parameters.sharpening.amount)}")
     if parameters.noise_reduction.luminance or parameters.noise_reduction.color:
         parts.append(
-            f"降噪 {int(round(parameters.noise_reduction.luminance))}"
-            f"/{int(round(parameters.noise_reduction.color))}"
+            f"降噪 {round(parameters.noise_reduction.luminance)}"
+            f"/{round(parameters.noise_reduction.color)}"
         )
 
     advanced = _advanced_sections(parameters)

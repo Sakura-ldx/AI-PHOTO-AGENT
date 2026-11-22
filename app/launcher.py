@@ -11,7 +11,6 @@ from collections.abc import Sequence
 
 import uvicorn
 
-
 DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 8000
 DEFAULT_OPEN_TIMEOUT_SECONDS = 15.0

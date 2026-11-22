@@ -17,12 +17,11 @@ from app.adapters.vision_models import (
 )
 from app.errors import ProviderOutputError, ProviderServiceError, ProviderTimeoutError
 from app.schemas import (
+    MAX_LEARNING_REFERENCES,
     LearningAnalysisResult,
     LearningReferenceAnalysisResult,
     LearningSession,
-    MAX_LEARNING_REFERENCES,
 )
-
 
 LOGGER = logging.getLogger(__name__)
 MAX_LEARNING_OUTPUT_TOKENS = 12_000

@@ -380,10 +380,12 @@ def test_photo_provider_receives_the_current_existing_original_path(tmp_path):
     class SpyProvider(MockAnalysisProvider):
         seen_path: Path | None = None
 
-        def analyze(self, image_path, metadata):
+        def analyze(self, image_path, metadata, *, consistency_context=""):
             self.seen_path = image_path
             assert image_path.is_file()
-            return super().analyze(image_path, metadata)
+            return super().analyze(
+                image_path, metadata, consistency_context=consistency_context
+            )
 
     storage = FileStorage(tmp_path)
     provider = SpyProvider()
@@ -402,8 +404,10 @@ def test_photo_provider_receives_the_current_existing_original_path(tmp_path):
 
 def test_invalid_photo_provider_output_is_rejected_before_persistence(tmp_path):
     class InvalidStyleProvider(MockAnalysisProvider):
-        def analyze(self, image_path, metadata):
-            analysis = super().analyze(image_path, metadata)
+        def analyze(self, image_path, metadata, *, consistency_context=""):
+            analysis = super().analyze(
+                image_path, metadata, consistency_context=consistency_context
+            )
             analysis.recommended_styles[0].name = "bad\x00name"
             return analysis
 
@@ -427,7 +431,8 @@ def test_photo_provider_failures_are_explicit_and_do_not_fallback_to_mock(tmp_pa
         def __init__(self, error) -> None:
             self.error = error
 
-        def analyze(self, image_path, metadata):
+        def analyze(self, image_path, metadata, *, consistency_context=""):
+            del consistency_context
             raise self.error
 
     filename, content, content_type = make_image_upload()

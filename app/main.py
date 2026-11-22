@@ -21,6 +21,7 @@ from app.api.photos import router as photos_router
 from app.config import AppSettings, load_settings
 from app.container import ServiceContainer
 from app.errors import (
+    ApplicationError,
     InvalidRequestError,
     ProviderOutputError,
     ProviderServiceError,
@@ -35,7 +36,6 @@ from app.services.analysis_tasks import AnalysisTaskRegistry
 from app.services.lightroom_bridge import LightroomBridge
 from app.services.storage import FileStorage
 from app.services.workflows import LearningWorkflow, PhotoWorkflow
-
 
 LOGGER = logging.getLogger(__name__)
 BASE_DIR = Path(__file__).resolve().parents[1]
@@ -53,11 +53,27 @@ _LOOPBACK_HOSTNAMES = frozenset({"127.0.0.1", "localhost", "::1"})
 # rejects DNS names that merely resolve to a loopback address, which closes the
 # DNS-rebinding hole left open by an Origin-only check.
 TRUSTED_HOSTS = ("127.0.0.1", "localhost", "[::1]", "testserver")
+# The bundled UI is a single document with one inline style block and one
+# inline script block, so 'unsafe-inline' is limited to those two directives.
+# Everything else is same-origin only; image previews may also come from
+# ``data:``/``blob:`` URLs created by the browser.
+_CONTENT_SECURITY_POLICY = (
+    "default-src 'self'; "
+    "base-uri 'none'; "
+    "object-src 'none'; "
+    "frame-ancestors 'none'; "
+    "form-action 'self'; "
+    "script-src 'self' 'unsafe-inline'; "
+    "style-src 'self' 'unsafe-inline'; "
+    "img-src 'self' data: blob:; "
+    "connect-src 'self'"
+)
 _SECURITY_HEADERS = {
     "X-Content-Type-Options": "nosniff",
     "X-Frame-Options": "DENY",
     "Referrer-Policy": "no-referrer",
     "Cross-Origin-Resource-Policy": "same-origin",
+    "Content-Security-Policy": _CONTENT_SECURITY_POLICY,
 }
 
 
@@ -335,6 +351,20 @@ def _register_error_handlers(application: FastAPI) -> None:
         return JSONResponse(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             content={"detail": "Application data could not be persisted."},
+        )
+
+    @application.exception_handler(ApplicationError)
+    async def application_error_handler(
+        _request: Request,
+        exc: ApplicationError,
+    ) -> JSONResponse:
+        # Specific subclasses above get their own status codes. This fallback
+        # keeps future domain errors from turning into an unlogged bare 500
+        # while still avoiding leaking internal details to the client.
+        LOGGER.error("Unhandled application error: %s", exc.detail)
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content={"detail": "Application request failed."},
         )
 
 

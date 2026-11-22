@@ -5,6 +5,7 @@ import logging
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Literal
 from urllib.parse import urlsplit
 
 from pydantic import BaseModel
@@ -30,10 +31,15 @@ from app.knowledge_schemas import (
     EditingDirectionSummary,
     KnowledgeAnalysisSnapshot,
     KnowledgeImage,
+    KnowledgeManualEdit,
     PhotoLearningSummary,
 )
 from app.schemas import (
+    ANALYSIS_VERSION,
+    MAPPING_VERSION,
+    MAX_LEARNING_REFERENCES,
     DevelopResponse,
+    EditingParametersV1,
     EditingStyle,
     ExportRequest,
     ExportResponse,
@@ -42,9 +48,8 @@ from app.schemas import (
     LearningAnalysisResult,
     LearningReference,
     LearningSession,
-    MAX_LEARNING_REFERENCES,
-    MAPPING_VERSION,
     PhotoAnalysisProviderSelection,
+    PhotoManualEdit,
     PhotoSession,
     PreviewRequest,
     PreviewResponse,
@@ -63,9 +68,9 @@ from app.services.lightroom_develop import build_lightroom_develop_settings
 from app.services.measurements import ImageMeasurements, measure_file
 from app.services.parameters_text import describe_parameters
 from app.services.preview import PREVIEW_RENDERER_VERSION, render_preview
+from app.services.series import apply_series_analysis, build_series_state
 from app.services.storage import FileStorage, UploadFileLike, find_style
 from app.services.xmp import write_xmp_preset
-
 
 LOGGER = logging.getLogger(__name__)
 
@@ -122,11 +127,18 @@ class PhotoWorkflow:
             if cancelled is not None and cancelled():
                 raise AnalysisCancelled("Photo analysis was cancelled.")
 
-        report("measuring", "正在读取照片与量化统计")
+        report("measuring", "正在读取照片、量化指标并比较相似照片")
         check_cancelled()
         session = self.storage.load_session(photo_id)
         source = _render_source(session)
         report("measuring", "正在量化影调与白平衡")
+        series_state = None
+        try:
+            series_state = build_series_state(self.storage, session, source)
+        except Exception as exc:  # noqa: BLE001 - consistency is best-effort
+            LOGGER.warning(
+                "Series matching failed for photo_id=%s: %s", photo_id, exc
+            )
         provider = self._analysis_provider_for(provider_name)
         check_cancelled()
         report("provider", "正在调用模型分析照片")
@@ -134,6 +146,7 @@ class PhotoWorkflow:
             provider_result = provider.analyze(
                 source,
                 session.metadata,
+                consistency_context=series_state.context if series_state else "",
             )
         except (ProviderTimeoutError, ProviderServiceError, ProviderOutputError):
             raise
@@ -156,6 +169,19 @@ class PhotoWorkflow:
             raise ProviderOutputError(
                 "Photo analysis provider execution or validation failed."
             ) from exc
+        if analysis.analysis_version is None:
+            analysis = analysis.model_copy(
+                update={"analysis_version": ANALYSIS_VERSION}
+            )
+        if series_state is not None:
+            try:
+                analysis = apply_series_analysis(analysis, series_state)
+            except Exception as exc:  # noqa: BLE001 - never discard the analysis
+                LOGGER.warning(
+                    "Series post-processing failed for photo_id=%s: %s",
+                    photo_id,
+                    exc,
+                )
         check_cancelled()
         self.storage.save_analysis(session, analysis)
         report("validating", "正在生成学习总结与推荐强度预览")
@@ -164,7 +190,7 @@ class PhotoWorkflow:
             self.build_learning_summary(photo_id)
         except AnalysisCancelled:
             raise
-        except Exception as exc:  # noqa: BLE001 - the summary is best-effort
+        except Exception as exc:
             # A learning summary must never take down the analysis result the
             # user is waiting for; it can be rebuilt later on demand.
             LOGGER.warning(
@@ -264,6 +290,15 @@ class PhotoWorkflow:
                     existed_before=existed_before,
                 )
                 raise
+        self._record_manual_edit(
+            photo_id,
+            style,
+            intensity=request.intensity,
+            parameters=parameters,
+            resolution=resolution,
+            preview_url=asset.url,
+            source="preview",
+        )
         return PreviewResponse(
             photo_id=photo_id,
             style_id=style.id,
@@ -273,15 +308,81 @@ class PhotoWorkflow:
             parameters_summary=describe_parameters(parameters),
             strength=strength,
             preview_is_approximate=True,
-            verified=resolution.report.verified if resolution.report else True,
-            warnings=list(resolution.report.warnings) if resolution.report else [],
+            verified=_resolution_is_verified(resolution),
+            warnings=[
+                _truncate_text(warning, 480)
+                for warning in _resolution_warnings(resolution)
+            ],
             baseline_notes=(
                 list(resolution.report.baseline.notes()) if resolution.report else []
             ),
         )
 
+    def _record_manual_edit(
+        self,
+        photo_id: str,
+        style: EditingStyle,
+        *,
+        intensity: float,
+        parameters: EditingParametersV1,
+        resolution: Resolution,
+        preview_url: str | None,
+        source: Literal["preview", "export"],
+    ) -> None:
+        """Persist the style/intensity the user explicitly asked to render."""
+
+        report = resolution.report
+        self.storage.save_manual_edit(
+            photo_id,
+            PhotoManualEdit(
+                style_id=style.id,
+                style_name=style.name,
+                intensity=intensity,
+                parameters_summary=_truncate_text(describe_parameters(parameters), 2000),
+                effective_strength=report.strength if report else 1.0,
+                verified=_resolution_is_verified(resolution),
+                warnings=[
+                    _truncate_text(warning, 480)
+                    for warning in _resolution_warnings(resolution)
+                ],
+                preview_url=preview_url,
+                source=source,
+            ),
+        )
+
     def get_learning_summary(self, photo_id: str) -> PhotoLearningSummary:
-        return self.storage.load_knowledge_summary(photo_id)
+        return self._with_manual_edit(self.storage.load_knowledge_summary(photo_id))
+
+    def _with_manual_edit(self, summary: PhotoLearningSummary) -> PhotoLearningSummary:
+        """Attach the live manual selection from the photo session.
+
+        The summary JSON is derived data; the user's choice lives on the
+        session, so every read enriches a copy instead of persisting it here.
+        """
+
+        try:
+            session = self.storage.load_session(summary.photo_id)
+        except ResourceNotFoundError:
+            return summary
+        edit = session.manual_edit
+        if edit is None:
+            return summary
+        return summary.model_copy(update={"manual_edit": self._knowledge_manual_edit(edit)})
+
+    @staticmethod
+    def _knowledge_manual_edit(edit: PhotoManualEdit) -> KnowledgeManualEdit:
+        return KnowledgeManualEdit(
+            style_id=edit.style_id,
+            style_name=edit.style_name,
+            intensity=edit.intensity,
+            parameters_summary=edit.parameters_summary,
+            effective_strength=edit.effective_strength,
+            verified=edit.verified,
+            warnings=list(edit.warnings),
+            preview_url=edit.preview_url,
+            source=edit.source,
+            updated_at=edit.updated_at,
+        )
 
     def build_learning_summary(self, photo_id: str) -> PhotoLearningSummary:
         """Persist the Phase 2 learning summary for one analyzed photo.
@@ -302,37 +403,47 @@ class PhotoWorkflow:
             )
         measurements = measure_file(_render_source(session))
         classification = classify_analysis(analysis, measurements, session.metadata)
-        preview_dir = self.storage.prepare_knowledge_previews(session.id)
-        directions = [
-            self._build_learning_direction(
-                session,
-                style,
-                measurements,
-                preview_dir,
+        # Keep the previous summary and its previews readable until the new
+        # summary is committed.  Serialize the whole publication so concurrent
+        # rebuilds cannot prune each other's freshly rendered files.
+        with self.storage.asset_transaction():
+            preview_dir = self.storage.ensure_knowledge_previews(session.id)
+            directions = [
+                self._build_learning_direction(
+                    session,
+                    style,
+                    measurements,
+                    preview_dir,
+                )
+                for style in analysis.recommended_styles
+            ]
+            summary = PhotoLearningSummary(
+                id=session.id,
+                photo_id=session.id,
+                image=KnowledgeImage(
+                    display_url=f"/api/photos/{session.id}/display",
+                    width=session.metadata.width,
+                    height=session.metadata.height,
+                    format=session.metadata.format,
+                    color_mode=session.metadata.color_mode,
+                    file_size=session.metadata.file_size,
+                    original_filename=session.original_filename,
+                    render_source=session.metadata.render_source,
+                ),
+                analysis=KnowledgeAnalysisSnapshot.from_analysis(analysis),
+                primary_category=classification.primary_category,
+                tags=list(classification.tags),
+                directions=directions,
+                overview=_compose_learning_overview(analysis, classification, directions),
             )
-            for style in analysis.recommended_styles
-        ]
-        summary = PhotoLearningSummary(
-            id=session.id,
-            photo_id=session.id,
-            image=KnowledgeImage(
-                display_url=f"/api/photos/{session.id}/display",
-                width=session.metadata.width,
-                height=session.metadata.height,
-                format=session.metadata.format,
-                color_mode=session.metadata.color_mode,
-                file_size=session.metadata.file_size,
-                original_filename=session.original_filename,
-                render_source=session.metadata.render_source,
-            ),
-            analysis=KnowledgeAnalysisSnapshot.from_analysis(analysis),
-            primary_category=classification.primary_category,
-            tags=list(classification.tags),
-            directions=directions,
-            overview=_compose_learning_overview(analysis, classification, directions),
-        )
-        self.storage.save_knowledge_summary(summary)
-        return summary
+            self.storage.save_knowledge_summary(summary)
+            keep_previews = [
+                Path(direction.preview_url).name
+                for direction in directions
+                if direction.preview_url
+            ]
+            self.storage.prune_knowledge_previews(session.id, keep_previews)
+        return self._with_manual_edit(summary)
 
     def _build_learning_direction(
         self,
@@ -355,8 +466,13 @@ class PhotoWorkflow:
         verified = False
         for index, candidate in enumerate(candidates):
             chosen = candidate
-            resolution = self._resolve_parameters(session, style, candidate)
-            verified = resolution.report.verified if resolution.report else True
+            resolution = self._resolve_parameters(
+                session,
+                style,
+                candidate,
+                measurements=measurements,
+            )
+            verified = _resolution_is_verified(resolution)
             if verified:
                 break
             if index == len(candidates) - 1:
@@ -365,13 +481,18 @@ class PhotoWorkflow:
                     "仍建议手动微调。"
                 )
         if resolution is None:  # defensive; candidates is never empty
-            resolution = self._resolve_parameters(session, style, recommended)
+            resolution = self._resolve_parameters(
+                session,
+                style,
+                recommended,
+                measurements=measurements,
+            )
 
         parameters = resolution.parameters
         report = resolution.report
         effective_strength = report.strength if report else chosen
         warnings = [
-            _truncate_text(item, 480) for item in (report.warnings if report else [])
+            _truncate_text(item, 480) for item in _resolution_warnings(resolution)
         ]
         baseline_notes = list(report.baseline.notes()) if report else []
 
@@ -402,7 +523,7 @@ class PhotoWorkflow:
             preview_path = preview_dir / f"{token}.jpg"
             render_preview(_render_source(session), preview_path, parameters)
             preview_url = self.storage.summary_preview_url(preview_path)
-        except Exception as exc:  # noqa: BLE001 - a summary must survive renders
+        except Exception as exc:
             LOGGER.warning(
                 "Unable to render learning summary preview for "
                 "photo_id=%s style_id=%s: %s",
@@ -480,6 +601,24 @@ class PhotoWorkflow:
                     existed_before=existed_before,
                 )
                 raise
+        # An export implies the user chose this look too. Reuse the matching
+        # preview asset when it exists so the knowledge note can show it.
+        preview_token = _asset_token(
+            style.id,
+            PREVIEW_RENDERER_VERSION,
+            parameters.model_dump_json(),
+        )
+        latest = self.storage.load_session(photo_id)
+        preview_asset = latest.preview_files.get(preview_token)
+        self._record_manual_edit(
+            photo_id,
+            style,
+            intensity=request.intensity,
+            parameters=parameters,
+            resolution=resolved,
+            preview_url=preview_asset.url if preview_asset else None,
+            source="export",
+        )
         return ExportResponse(
             photo_id=photo_id,
             style_id=style.id,
@@ -523,6 +662,8 @@ class PhotoWorkflow:
         session: PhotoSession,
         style: EditingStyle,
         intensity: float,
+        *,
+        measurements: ImageMeasurements | None = None,
     ) -> Resolution:
         """Anchor the model's look to measured statistics.
 
@@ -534,15 +675,17 @@ class PhotoWorkflow:
 
         try:
             source = _render_source(session)
-            measurements = measure_file(source)
+            resolved_measurements = (
+                measurements if measurements is not None else measure_file(source)
+            )
             observer = make_render_observer(source) if intensity > 0.0 else None
             return resolve_parameters(
-                measurements=measurements,
+                measurements=resolved_measurements,
                 style_parameters=style.parameters,
                 intensity=intensity,
                 observer=observer,
             )
-        except Exception as exc:  # noqa: BLE001 - documented graceful degradation
+        except Exception as exc:
             LOGGER.warning(
                 "Parameter resolution failed for photo_id=%s style_id=%s; "
                 "falling back to intensity-scaled parameters: %s",
@@ -568,7 +711,7 @@ class PhotoWorkflow:
             latest = self.storage.load_session(photo_id)
             if token in getattr(latest, collection):
                 return
-        except Exception:
+        except Exception:  # noqa: BLE001 - unknown commit state must preserve the asset
             # If commit state cannot be established, preserve the file for
             # recovery rather than risk deleting another request's asset.
             return
@@ -716,6 +859,21 @@ def _truncate_text(value: str, limit: int) -> str:
     if len(text) <= limit:
         return text
     return text[: limit - 1].rstrip() + "…"
+
+
+_DEGRADED_RESOLUTION_WARNING = "参数解析降级为按强度缩放，未经过渲染校验。"
+
+
+def _resolution_is_verified(resolution: Resolution) -> bool:
+    """A degraded resolver fallback has not been verified against a render."""
+
+    return resolution.report.verified if resolution.report is not None else False
+
+
+def _resolution_warnings(resolution: Resolution) -> tuple[str, ...]:
+    if resolution.report is None:
+        return (_DEGRADED_RESOLUTION_WARNING,)
+    return tuple(resolution.report.warnings)
 
 
 def _asset_token(style_id: str, *content_components: str) -> str:

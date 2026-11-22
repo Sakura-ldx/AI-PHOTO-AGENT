@@ -9,6 +9,7 @@ from pydantic import ValidationError
 
 import app.services.xmp as xmp_module
 from app.schemas import (
+    MAPPING_VERSION,
     EditingParametersV1,
     EditingStyle,
     ImageAnalysis,
@@ -19,7 +20,6 @@ from app.schemas import (
     LearningSession,
     LearningSessionResponse,
     LearningSummary,
-    MAPPING_VERSION,
     PhotoUploadResponse,
     PreviewResponse,
 )
@@ -30,7 +30,6 @@ from app.services.xmp import (
     build_xmp_preset,
     write_xmp_preset,
 )
-
 
 VALID_RESOURCE_ID = "0123456789abcdef0123456789abcdef"
 

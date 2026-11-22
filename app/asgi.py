@@ -6,5 +6,4 @@ tests, tooling, and alternative dependency injection setups.
 
 from app.main import create_app
 
-
 app = create_app()

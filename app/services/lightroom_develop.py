@@ -2,13 +2,12 @@ from __future__ import annotations
 
 from typing import Any
 
-from app.schemas import DEVELOP_SETTINGS_VERSION, EditingParametersV1, HSL_CHANNELS
+from app.schemas import DEVELOP_SETTINGS_VERSION, HSL_CHANNELS, EditingParametersV1
 from app.services.parameter_specs import (
     PARAMETER_SPECS,
     encode_for_lightroom,
     is_neutral,
 )
-
 
 # These keys are accepted by LrPhoto:applyDevelopSettings (Lightroom SDK 6+).
 # The tone curve is represented as a flat array: { x1, y1, x2, y2, ... }.

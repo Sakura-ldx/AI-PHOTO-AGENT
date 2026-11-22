@@ -23,7 +23,6 @@ from app.services.edit_resolver import make_render_observer, resolve_parameters
 from app.services.measurements import ImageMeasurements, measure_file, measure_image
 from app.services.preview import render_image
 
-
 #: How much the darkest 1% is allowed to rise. The v3 renderer lifted it by
 #: +33 levels on the reference night portrait, which is what made every preview
 #: look like it had a grey filter over it.

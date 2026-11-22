@@ -28,7 +28,6 @@ from PIL import Image, ImageChops, ImageOps, ImageStat
 
 from app.imaging import flatten_to_rgb
 
-
 MEASUREMENT_VERSION = "image_measurements_v1"
 MEASUREMENT_MAX_SIZE = (512, 512)
 
@@ -197,15 +196,21 @@ def describe_for_prompt(measurements: ImageMeasurements) -> str:
     lines = [
         "图像量化测量（由程序计算，可信；0-255 尺度）：",
         f"- 亮度：均值 {luma.mean:.1f}，中位 {luma.p50}，标准差 {luma.std:.1f}",
-        f"- 影调分布：p1={luma.p01} p5={luma.p05} p25={luma.p25} p75={luma.p75} "
-        f"p95={luma.p95} p99={luma.p99}",
+        (
+            f"- 影调分布：p1={luma.p01} p5={luma.p05} p25={luma.p25} "
+            f"p75={luma.p75} p95={luma.p95} p99={luma.p99}"
+        ),
         f"- 有效影调范围（p95-p05）：{luma.range_90}",
         f"- 剪切：黑场 {luma.clip_low * 100:.2f}%，白场 {luma.clip_high * 100:.2f}%",
-        f"- 暗部占比（<=16）：{measurements.deep_shadow_share * 100:.1f}%；"
-        f"高光占比（>=240）：{measurements.bright_highlight_share * 100:.1f}%",
-        f"- 中性色偏：R/G={measurements.neutral_red_ratio:.2f}，"
-        f"B/G={measurements.neutral_blue_ratio:.2f}"
-        f"（覆盖 {measurements.neutral_coverage * 100:.0f}% 像素）",
+        (
+            f"- 暗部占比（<=16）：{measurements.deep_shadow_share * 100:.1f}%；"
+            f"高光占比（>=240）：{measurements.bright_highlight_share * 100:.1f}%"
+        ),
+        (
+            f"- 中性色偏：R/G={measurements.neutral_red_ratio:.2f}，"
+            f"B/G={measurements.neutral_blue_ratio:.2f}"
+            f"（覆盖 {measurements.neutral_coverage * 100:.0f}% 像素）"
+        ),
         f"- 饱和度均值：{measurements.saturation_mean:.0f}/255",
         f"- 中调相对 18% 灰：{measurements.mid_tone_ev_delta:+.2f} EV（正值=偏暗，需要提亮）",
     ]

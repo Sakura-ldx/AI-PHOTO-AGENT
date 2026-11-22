@@ -29,16 +29,18 @@ def make_image(path: Path) -> None:
 
 
 def test_prompt_version_matches_the_calibrated_prompt() -> None:
-    assert PHOTO_PROMPT_VERSION == "photo-analysis-v5"
+    assert PHOTO_PROMPT_VERSION == "photo-analysis-v6"
     # The calibration table is what stops the model from returning 0.1 EV style
     # token adjustments that nobody can see.
     assert "exposure 以 EV 计" in PHOTO_SYSTEM_PROMPT
     assert "+1.0 是整体明显提亮一档" in PHOTO_SYSTEM_PROMPT
     assert "不要默认使用“中性/偏暖/偏冷”三分法" in PHOTO_SYSTEM_PROMPT
-    assert "至少一套" in PHOTO_SYSTEM_PROMPT
     assert "两个非白平衡维度" in PHOTO_SYSTEM_PROMPT
     assert "量化测量" in PHOTO_SYSTEM_PROMPT
-    # v5 keeps the advanced Lightroom values in the compact override list.
+    # v6 keeps three styles but makes monochrome conditional.
+    assert "至少一套" not in PHOTO_SYSTEM_PROMPT
+    assert "黑白不是必选项" in PHOTO_SYSTEM_PROMPT
+    assert "花卉" in PHOTO_SYSTEM_PROMPT
     assert "parameters.overrides" in PHOTO_SYSTEM_PROMPT
     assert "grain_amount" in PHOTO_SYSTEM_PROMPT
     assert "black_and_white" in PHOTO_SYSTEM_PROMPT
@@ -74,6 +76,18 @@ def test_user_prompt_omits_the_block_when_measurement_is_unavailable() -> None:
 
     assert "量化测量（由程序计算" not in prompt
     assert "请分析附加图片" in prompt
+
+
+def test_user_prompt_embeds_series_context_and_quality_repair() -> None:
+    prompt = _user_prompt(
+        make_metadata(),
+        consistency_context="REFERENCE-SENTINEL",
+        quality_issue="黑白方案缺少具体收益点",
+    )
+
+    assert "REFERENCE-SENTINEL" in prompt
+    assert "黑白方案缺少具体收益点" in prompt
+    assert "不要为了凑数加入黑白" in prompt
 
 
 def test_deepseek_request_body_carries_the_measurement_block() -> None:

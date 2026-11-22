@@ -272,6 +272,35 @@ def test_cancelled_runner_sees_the_request_and_leaves_result_empty():
     registry.shutdown()
 
 
+def test_shutdown_marks_active_tasks_cancelled():
+    registry = AnalysisTaskRegistry(max_workers=1)
+    started = threading.Event()
+    release = threading.Event()
+
+    def slow(report, cancelled):
+        report("provider", "正在调用模型分析照片")
+        started.set()
+        release.wait(2.0)
+        return make_analysis()
+
+    task = registry.submit("photo-1", slow)
+    assert started.wait(2.0), "runner never started"
+
+    registry.shutdown()
+    status = registry.status(task.task_id)
+    assert status is not None
+    assert status.stage == "cancelled"
+    assert status.progress_hint == "已取消"
+    assert status.error is None
+
+    # A late result from the abandoned thread must not resurrect the task.
+    release.set()
+    deadline = time.monotonic() + 2.0
+    while registry.in_flight and time.monotonic() < deadline:
+        time.sleep(0.01)
+    assert registry.status(task.task_id).stage == "cancelled"
+
+
 def test_runner_cap_fails_fast_instead_of_queueing():
     registry = AnalysisTaskRegistry(max_workers=1)
     blocked = threading.Event()
@@ -325,9 +354,11 @@ def test_cancelled_analysis_never_touches_the_session(tmp_path):
     provider_calls: list[Path] = []
 
     class TrackingProvider(MockAnalysisProvider):
-        def analyze(self, image_path, metadata):
+        def analyze(self, image_path, metadata, *, consistency_context=""):
             provider_calls.append(image_path)
-            return super().analyze(image_path, metadata)
+            return super().analyze(
+                image_path, metadata, consistency_context=consistency_context
+            )
 
     workflow = PhotoWorkflow(storage=storage, analysis_provider=TrackingProvider())
     with pytest.raises(AnalysisCancelled):

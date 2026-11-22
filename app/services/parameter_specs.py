@@ -500,7 +500,7 @@ def encode_for_lightroom(spec: ParameterSpec, value: Any) -> int | float | str |
         return flattened
     if spec.kind == "number":
         return round(float(value), 1)
-    return int(round(float(value)))
+    return round(float(value))
 
 
 def _iter_curve(value: Any) -> list[tuple[int, int]]:

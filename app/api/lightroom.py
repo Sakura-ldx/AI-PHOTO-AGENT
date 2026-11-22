@@ -12,7 +12,6 @@ from app.schemas import (
     LightroomStatusResponse,
 )
 
-
 router = APIRouter(prefix="/api/lightroom", tags=["lightroom"])
 Services = Annotated[ServiceContainer, Depends(get_services)]
 ERROR_RESPONSE = {"model": ErrorResponse}

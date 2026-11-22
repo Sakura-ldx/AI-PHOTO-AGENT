@@ -14,7 +14,6 @@ import app.services.lightroom_bridge as bridge_module
 from app.adapters.analysis import MockAnalysisProvider
 from app.config import AppSettings
 from app.main import create_app
-from app.services.storage import FileStorage
 from app.services.lightroom_bridge import (
     BRIDGE_DIR_NAME,
     JOB_SCHEMA_VERSION,
@@ -23,6 +22,7 @@ from app.services.lightroom_bridge import (
     LightroomBridge,
     _safe_preset_filename,
 )
+from app.services.storage import FileStorage
 
 
 def jpeg_bytes() -> bytes:
@@ -217,6 +217,9 @@ def test_send_without_lightroom_returns_actionable_status(tmp_path, monkeypatch)
         ("AI Photo Agent - 自然纪实 - 70", "AI Photo Agent - 自然纪实 - 70"),
         ("bad/name:with*chars?", "bad_name_with_chars_"),
         ("   ...   ", "AI Photo Agent Preset"),
+        ("CON", "_CON"),
+        ("com1.jpg", "_com1.jpg"),
+        ("LPT9", "_LPT9"),
     ],
 )
 def test_preset_filename_sanitization(raw, expected):
@@ -396,7 +399,7 @@ def test_plugin_clamps_bezel_fade_delay():
     for file_name in ("Actions.lua", "ProgressWindow.lua"):
         source = (PLUGIN_SOURCE_DIR / file_name).read_text(encoding="utf-8")
         helper = re.search(
-            r"local function show_bezel\(message, seconds\).*?\nend", source, re.S
+            r"local function show_bezel\(message, seconds\).*?\nend", source, re.DOTALL
         )
         assert helper, file_name
         assert "LrDialogs.showBezel(message" in helper.group(0), file_name
@@ -436,7 +439,7 @@ def test_plugin_previews_before_keeping():
     assert body.index("preview_style(") < body.index("confirm_keep(")
     for label in ("保留这些调整", "换一个风格", "取消并还原"):
         assert label in actions, label
-    confirm = re.search(r"LrDialogs\.confirm\((.*?)\n    \)", actions, re.S)
+    confirm = re.search(r"LrDialogs\.confirm\((.*?)\n    \)", actions, re.DOTALL)
     assert confirm, "confirm_keep must call LrDialogs.confirm"
     assert '"换一个风格"' in confirm.group(1)
 

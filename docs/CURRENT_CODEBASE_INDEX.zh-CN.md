@@ -4,7 +4,7 @@
 
 ## 1. 代码规模与技术栈
 
-当前仓库包含约 12,000 行 `app/` Python 代码、2,100 行 `app/static/index.html`、4,000 行 Lightroom Lua 插件（13 个文件）、1,300 行 `scripts/` 脚本，以及 `dsh-plugin/` 下约 5,900 行 JS/ESM 插件代码；自动化测试代码位于 `tests/`。应用采用 Python 3.12、FastAPI、Pydantic 2、Pillow、OpenAI Python SDK、Codex CLI 和原生 HTML/CSS/JavaScript，不依赖前端构建工具；Lightroom 侧为 Lightroom Classic SDK 6+ 的 Lua 插件（插件版本 1.7.2，`LrSdkVersion=10.0`、`LrSdkMinimumVersion=6.0`）；`dsh-plugin` 是 DeepSeek Harness 的持久化插件（`@local/dsh-photo-agent` 0.2.0），复用本机 FastAPI 后端。
+当前仓库包含约 11,300 行 `app/` Python 代码、2,947 行 `app/static/index.html`、4,000 行 Lightroom Lua 插件（13 个文件）、1,300 行 `scripts/` 脚本，以及 `dsh-plugin/` 下约 5,900 行 JS/ESM 插件代码；自动化测试代码位于 `tests/`。应用采用 Python 3.12、FastAPI、Pydantic 2、Pillow、OpenAI Python SDK、Codex CLI 和原生 HTML/CSS/JavaScript，不依赖前端构建工具；Lightroom 侧为 Lightroom Classic SDK 6+ 的 Lua 插件（插件版本 1.7.2，`LrSdkVersion=10.0`、`LrSdkMinimumVersion=6.0`）；`dsh-plugin` 是 DeepSeek Harness 的持久化插件（`@local/dsh-photo-agent` 0.2.0），复用本机 FastAPI 后端。
 
 运行依赖固定在 `requirements.txt`：
 
@@ -35,13 +35,13 @@
 | `app/imaging.py` | 88 | 位深/色彩模式归一化与 RGB 展平 |
 | `app/launcher.py` | 105 | 本地服务器、回连 URL 与浏览器启动 |
 | `app/main.py` | 304 | 应用工厂、lifespan、Provider bundle、路由/错误/静态目录与请求守卫装配 |
-| `app/schemas.py` | 892 | 领域、Provider 结果、持久化、后台分析任务与 API Schema |
-| `app/knowledge_schemas.py` | 260 | Phase 2 学习总结与知识库 DTO（图像快照/分析快照/方向与推荐强度/标签/列表与概览） |
+| `app/schemas.py` | 928 | 领域、Provider 结果、持久化、后台分析任务与 API Schema |
+| `app/knowledge_schemas.py` | 305 | Phase 2 学习总结与知识库 DTO（图像快照/分析快照/方向与推荐强度/8 维标签/图片风格计数/人工选择方向/列表与概览） |
 | `app/api/__init__.py` | 1 | API 包标记 |
 | `app/api/dependencies.py` | 9 | 请求级容器依赖 |
 | `app/api/photos.py` | 217 | Phase 1 HTTP API（上传/显示/同步分析与后台任务/预览/导出/develop/lightroom） |
 | `app/api/learning.py` | 105 | Phase 2 HTTP API |
-| `app/api/knowledge.py` | 212 | Phase 2 学习总结与知识库 HTTP API（列表/筛选/详情/概览/重建） |
+| `app/api/knowledge.py` | 340 | Phase 2 学习总结与知识库 HTTP API（目录筛选/风格过滤/近似搜索/详情/概览/重建） |
 | `app/api/lightroom.py` | 36 | Lightroom 状态与插件安装 API |
 | `app/adapters/__init__.py` | 1 | Provider 包标记 |
 | `app/adapters/analysis.py` | 208 | 照片 Provider 契约与 Mock |
@@ -56,8 +56,9 @@
 | `app/adapters/codex_analysis.py` | 74 | Codex CLI Phase 1 适配器 |
 | `app/adapters/codex_learning.py` | 104 | Codex CLI Phase 2 多图适配器 |
 | `app/services/__init__.py` | 1 | 服务包标记 |
-| `app/services/workflows.py` | 750 | Phase 1/2 用例、结果复验、8 图前置限制、后台分析包装、可信合并与学习总结生成 |
-| `app/services/storage.py` | 847 | 文件、JSON、锁、并发 8 图封顶、原图文件名、重分析失效、知识库与资产存储 |
+| `app/services/workflows.py` | 867 | Phase 1/2 用例、结果复验、8 图前置限制、后台分析包装、可信合并与学习总结生成 |
+| `app/services/series.py` | 605 | 纯 Pillow 照片签名、dHash 相似匹配、locked/aligned/context 系列策略与参考摘要 |
+| `app/services/storage.py` | 862 | 文件、JSON、锁、并发 8 图封顶、原图文件名、重分析失效、人工选择记录、知识库与资产存储 |
 | `app/services/preview.py` | 1,168 | Pillow preview v5 近似渲染 |
 | `app/services/xmp.py` | 235 | Lightroom XMP 生成（含分通道曲线与全部 crs 高级属性） |
 | `app/services/parameter_specs.py` | 547 | 57 个显影参数的单一事实源（键名、范围、中性值、预览支持度） |
@@ -68,8 +69,8 @@
 | `app/services/analysis_tasks.py` | 325 | 后台分析任务注册表、8 runner / 16 in-flight 上限、状态回收与取消 |
 | `app/services/edit_resolver.py` | 814 | 基于 512px 真实渲染观测的参数解析与纠偏 |
 | `app/services/measurements.py` | 347 | 纯 Pillow 图像量化测量与 Provider 提示词测量块 |
-| `app/services/learning_summary.py` | 1,463 | 学习总结的确定性分类（6 维受控词表 + 测量补充 + 互斥标签消解）与智能推荐强度 |
-| `app/static/index.html` | 2,150 | Phase 1/2 中文单页 UI、修图/知识库双界面切换、知识库浏览、放大查看器、后台分析进度和 Lightroom 联动区 |
+| `app/services/learning_summary.py` | 1,852 | 学习总结的确定性分类（8 维受控词表：题材/光线/色彩/影调/构图/待改善/人像风格/环境背景 + 测量补充 + 互斥标签消解 + 均衡标签预算）与智能推荐强度 |
+| `app/static/index.html` | 2,947 | Phase 1/2 中文单页 UI、修图/知识库双界面切换、知识库目录树 + 原图图片墙 + 小红书式笔记弹层（原图/修图双图对照、人工选择方向）+ 近似搜索、后台分析进度和 Lightroom 联动区 |
 
 脚本：
 
@@ -107,6 +108,8 @@
 | `tests/test_resolver.py` | 438 | 基线校正、软膝曲线、回渲染校验的收敛/异常/上限 |
 | `tests/test_services.py` | 394 | 核心服务、算法、原子失败和资产事务测试 |
 | `tests/test_storage_hardening.py` | 523 | 存储安全、原子性、并发封顶与重分析失效 |
+| `tests/test_learning_summary.py` | 760 | 学习总结分类与推荐强度纯函数：8 维词表、测量补充、互斥标签、12 标签均衡预算、主分类回退与强度区间 |
+| `tests/test_knowledge_api.py` | 417 | 知识库 API：自动总结、目录筛选（标签/维度/风格/主分类）、近似搜索、分页、详情、概览、重建与错误契约 |
 | `tests/test_xmp_and_schema_hardening.py` | 395 | 非空内容 Schema 与 XMP 加固 |
 
 ### Lightroom 插件（`lightroom/AIPhotoAgent.lrplugin/`）
@@ -276,10 +279,10 @@ Uvicorn 的默认运行入口，执行 `app = create_app()`。把默认实例放
 
 Phase 2 学习总结与知识库接口，列表/详情/概览均为只读投影，另提供单张重建：
 
-- `GET /api/knowledge/summaries`：按 `tag`、`dimension`、`category` 过滤并分页（`limit` 1–200 默认 50、`offset` ≥ 0），返回 `items`、`total`、全量 `facets` 与主分类计数；`dimension` 必须是六个标签维度之一，只带 `dimension` 不带 `tag` 返回 400。
+- `GET /api/knowledge/summaries`：按 `tag`、`dimension`、`category`、`style` 过滤，按 `q` 做标签/风格/主分类/文件名的近似搜索（子串 + `SequenceMatcher` ≥ 0.55，多关键词为 AND），并分页（`limit` 1–200 默认 50、`offset` ≥ 0），返回 `items`、`total`、全量 `facets`、`primary_categories` 与按方向统计的 `style_tags`；`dimension` 必须是八个标签维度之一，只带 `dimension` 不带 `tag` 返回 400。
 - `GET /api/knowledge/summaries/{photo_id}`：单张照片的完整学习总结（图像快照、分析快照、3 个方向及推荐强度/参数总结/预览）。
 - `POST /api/knowledge/summaries/{photo_id}/rebuild`：为已分析照片重建总结（未分析返回 409），用于回填旧照片或修复缺失预览。
-- `GET /api/knowledge/overview`：总览（总结数、覆盖分类数、平均推荐强度、最近生成时间、facets 与分类计数）。
+- `GET /api/knowledge/overview`：总览（总结数、覆盖分类数、平均推荐强度、最近生成时间、facets、分类计数与 `style_tags`）。
 
 筛选在进程内完成（本地单进程 MVP），结果固定按 `generated_at` 降序；`facets`/`primary_categories` 始终基于全量总结统计，避免前端在筛选后失去可选项。DSH 插件通过 Host 代理路由 `GET /knowledge/overview`、`GET /knowledge/summaries`、`GET /knowledge/summaries/:id`、`POST /knowledge/summaries/:id/rebuild` 复用这些接口。
 
@@ -292,10 +295,10 @@ Phase 2 学习总结与知识库接口，列表/详情/概览均为只读投影�
 - `has_adjustments()`：决定 XMP 是否应声明 `HasSettings=True`。
 - `EditingStyle`：风格 ID、说明、适用理由、视觉影响和参数；名称必须可安全写入 XML 1.0。
 - `ImageAnalysis`：非空、有界的技术、构图、色彩观察，以及恰好三个且 ID 唯一的推荐风格。
-- `PhotoSession`：私有原图路径、元数据、分析和生成资产索引，以及 `original_filename`（上传文件名的 basename，已脱敏、≤255 字符，未知为 null；仅用于展示与 Lightroom 身份校验，绝不保存绝对路径）。
+- `PhotoSession`：私有原图路径、元数据、分析和生成资产索引，以及 `original_filename`（上传文件名的 basename，已脱敏、≤255 字符，未知为 null；仅用于展示与 Lightroom 身份校验，绝不保存绝对路径）。`manual_edit` 记录用户在网页端最近一次主动选择并渲染的风格与强度（含参数总结、生效强度、校验状态、预览 URL 与来源），重新分析时清除。
 - 后台分析任务 DTO：`AnalysisTaskCreated` / `AnalysisTaskStatus`（stage、progress_hint、error、阶段时间戳；只有 `succeeded` 状态携带 analysis，取消/失败不会泄漏被丢弃的结果）。
 - 学习模型：LearningReferenceAnalysis、LearningSummary、LearningReference、LearningSession；单次真实分析最多 8 张图。
-- 知识库模型（`app/knowledge_schemas.py`）：`PhotoLearningSummary`（图像快照、分析快照、恰好 3 个方向、分类标签、主分类与中文 `overview`）、`EditingDirectionSummary`（方向、参数总结、智能推荐强度与中文理由、实际生效强度、`verified`/`warnings`、预览 URL）、`KnowledgeImage`/`KnowledgeAnalysisSnapshot`/`KnowledgeTag`，以及列表/概览响应 DTO；`id` 必须等于 `photo_id`，方向 `style_id` 唯一、标签去重。
+- 知识库模型（`app/knowledge_schemas.py`）：`PhotoLearningSummary`（图像快照、分析快照、恰好 3 个方向、8 维分类标签、主分类与中文 `overview`）、`EditingDirectionSummary`（方向、参数总结、智能推荐强度与中文理由、实际生效强度、`verified`/`warnings`、预览 URL）、`KnowledgeImage`/`KnowledgeAnalysisSnapshot`/`KnowledgeTag`、`KnowledgeStyleCount`（按风格名统计照片数，供目录树使用）、`KnowledgeManualEdit`（用户最近一次手动选择的风格/强度/参数总结/校验状态/预览 URL 与来源），以及列表/概览响应 DTO；`id` 必须等于 `photo_id`，方向 `style_id` 唯一、标签去重。
 - `PreviewResponse` 新增 resolution 诊断字段 `verified`/`warnings`/`baseline_notes`，让学习总结能记录推荐强度为何被降档或校验通过。
 - `LearningAnalysisResult`：Provider 只能返回 reference ID、单图 analysis 和 summary，不能返回整个 session 或控制路径/来源。
 - Lightroom DTO：`ExportResponse` / `DevelopResponse` 的本地 `preset_path` 以 `exclude=True` 从 HTTP 隐藏；状态/安装/发送响应只在本地 UI 场景暴露 Lightroom 目录、桥接收件箱与回连 URL。
@@ -338,13 +341,27 @@ timeout、非零退出和输出错误均有明确语义。当前合成图真实�
 
 PhotoWorkflow 编排上传、分析、参数缩放、预览、XMP 导出和资产登记。生成资产 token 基于风格 ID、有效参数和渲染/映射版本的 SHA-256 摘要，避免相同输出重复生成，也避免不同有效参数覆盖。
 
-分析成功并写回 session 后，`analyze_with_progress` 会继续调用 `build_learning_summary` 生成 Phase 2 学习总结：用 `measure_file` 量化原图，`classify_analysis` 产出 6 个维度的标签与主分类，`recommend_intensity` 为 3 个风格分别计算推荐强度；每个方向再用 `_resolve_parameters` 在候选强度（推荐值、-10%、-20%）上逐档校验，未通过就自动降档，随后渲染到 `generated/summaries/<photo_id>/` 并把 intensity reason、warnings 与基线校正写入总结。总结生成是 best-effort：任何异常只记录日志，绝不推翻已保存的分析结果；分析变化时旧总结与旧预览目录会被删除，也可随时通过 rebuild 重建。
+分析成功并写回 session 后，`analyze_with_progress` 会继续调用 `build_learning_summary` 生成 Phase 2 学习总结：用 `measure_file` 量化原图，`classify_analysis` 产出 8 个维度（题材场景/光线/色彩/影调/构图/待改善/人像风格/环境背景）的标签与主分类，`recommend_intensity` 为 3 个风格分别计算推荐强度；每个方向再用 `_resolve_parameters` 在候选强度（推荐值、-10%、-20%）上逐档校验，未通过就自动降档，随后渲染到 `generated/summaries/<photo_id>/` 并把 intensity reason、warnings 与基线校正写入总结。标签总预算 12 个、每维最多 2 个，并先保证每维一个再补第二标签，避免人像/环境目录被高维词挤空。总结生成是 best-effort：任何异常只记录日志，绝不推翻已保存的分析结果；分析变化时旧总结与旧预览目录会被删除，也可随时通过 rebuild 重建。用户主动预览或导出成功后，Workflow 会把所选风格、强度、参数总结、生效强度、校验状态和预览 URL 写入 `PhotoSession.manual_edit`（导出时 `source=export` 并尽量关联已有推荐强度预览）；知识库详情读取时由 Workflow 实时补充到 `PhotoLearningSummary.manual_edit`，因此 rebuild 不会丢用户选择。
 
 LearningWorkflow 编排主题、参考图、来源 URL 校验和分析。上传前限制 session 最多 8 图，
 分析前再次限制最多 8 图并记录
 reference ID 快照；Provider 返回后验证窄结果的 reference ID 顺序与完整性，再把分析合并
 到可信 session。保存时再次比较最新快照，参考图在分析期间变化则返回 409；Provider
 service/timeout/output 错误分别保持 502/504/500。
+
+### `app/services/series.py`
+
+系列一致性是 Provider 之外的确定性 best-effort 层。`compute_signature()` 用 Pillow 计算
+64-bit dHash（9×8 灰度逐行比较，不需要 numpy）以及宽高比、平均亮度、平均饱和度，
+`SignatureCache` 把结果原子写入 `data/signatures/<photo_id>.json`，并按源文件
+`mtime_ns`/`size` 失效。`find_series_matches()` 只比较当前版本（`photo_analysis_v2`）
+的已分析 session：dHash≤6 且宽高比差≤0.03 为 `duplicate`，同文件名前缀且编号差≤50
+为 `sequence`，否则用 0.55/0.15/0.15/0.15 的加权相似度取 `visual`；最多 3 个参考。
+`build_series_state()` 决定 `locked`（其他 session 近似重复）、`aligned`（自己重分析、
+连拍、强视觉相似）或 `context`；`build_consistency_context()` 生成不超过 2400 字的参考
+摘要并声明“参考不是指令”。`apply_series_analysis()` 在 `locked` 时精确复用参考的 3 套
+风格，在 `aligned` 且参考无黑白时过滤本次黑白并尽量从参考的彩色风格补齐到 3 套。
+签名/匹配/应用失败只记录 warning，不改变 Provider 结果。
 
 ### `app/services/storage.py`
 
@@ -399,12 +416,12 @@ approximate，不等同于 Camera Raw。
 
 ## 9. 前端代码
 
-`app/static/index.html` 是 2,150 行无构建单页应用，分为「修图」与「知识库」两个顶层界面，由顶部导航按钮双向切换（`#studioViewBtn` / `#knowledgeViewBtn`，用 `aria-pressed` 标记当前界面；首次进入知识库时懒加载数据，切换时复位滚动位置），另含图片 Lightbox 与 Lightroom 联动：
+`app/static/index.html` 是 2,947 行无构建单页应用，分为「修图」与「知识库」两个顶层界面，由顶部导航按钮双向切换（`#studioViewBtn` / `#knowledgeViewBtn`，用 `aria-pressed` 标记当前界面；首次进入知识库时懒加载数据，切换时复位滚动位置），含 Lightroom 联动：
 
 - Phase 1：上传并分析（同步或 `/analyze/jobs` 后台任务，显示阶段进度并可取消）、风格卡选择、强度滑杆、预览、XMP 导出、发送到 Lightroom 与插件安装/状态；五个功能标题不带数字编号。
 - 网页端不再包含「摄影学习」参考图板块；对应的后端 API 与插件工具仍保留（见 §5）。
-- Phase 2 学习总结与知识库（独立「知识库」界面）：总览统计、主分类与 6 维标签筛选（chips）、卡片网格、按需懒加载卡片详情（3 个方向 + 推荐强度理由 + 参数总结 + 推荐强度预览）、当前照片重建；分析成功后自动刷新知识库并在诊断/预览区提示切换查看。
-- 图片查看：上传图、原图、近似预览、导出卡片预览与知识库缩略图/预览均可点击进入全屏 Lightbox，支持滚轮以鼠标位置为锚点缩放、放大后拖动平移、双击/「适应窗口」复位。
+- Phase 2 学习总结与知识库（独立「知识库」界面）：左侧 sticky 目录树（全部照片 / 图片风格 / 构图 / 人像风格 / 环境背景 / 题材场景 / 光线 / 色彩 / 影调 / 待改善，分组可折叠、条目带数量），右侧 3:4 纯图片墙只显示原图（懒加载，不再混入修图预览）；点击图片以小红书笔记式弹层并排展示原图与当前修图方向预览，同时展示主分类、生成时间、标签、分析总结和 3 个修图方向（推荐强度理由、参数总结与可切换的推荐强度预览）；若该照片已在网页端选择过风格与强度，弹层额外显示「你选择过的修图方向」（风格、强度、参数总结、校验状态、来源，以及可点击查看的该次预览）。顶部搜索框以 300ms 防抖 + Enter 触发近似搜索，并可与目录条目叠加筛选；保留统计行、刷新、当前照片重建、分析成功后自动刷新与分页加载更多。
+- 图片查看：上传区与预览对比区直接内联展示原图与修图预览；知识库图片墙点击打开笔记弹层，弹层内并排展示原图与当前修图方向预览，便于对照。
 
 前端通过 `currentPayload()` 绑定 photo/style/intensity 快照，避免旧异步响应覆盖新选择；每个动作使用局部 busy/error/finally 状态；后台分析用任务轮询更新进度并在切换选择时丢弃迟到响应；所有动态用户/服务文本通过 `textContent` 创建，避免动态 `innerHTML` 注入；后端返回的资源 URL 经 `sameOriginUrl()` 检查。
 
@@ -440,15 +457,15 @@ approximate，不等同于 Camera Raw。
 | `tests/test_image_format_support.py` | TIFF/CR3 上传、CR3 预览提取、JPEG 段遍历、显示端点、像素限制和学习参考图边界。 |
 | `tests/test_launcher.py` | 通配 host、IPv6、回连 `server_url` 发布和浏览器就绪打开。 |
 | `tests/test_lightroom_plugin.py` | 显影参数、桥接任务、插件安装、预设/XMP 内容与 Lua 插件包完整性。 |
-| `tests/test_learning_summary.py` | 学习总结分类与推荐强度纯函数：6 维词表命中、测量补充、每维/总量上限、主分类回退、强度基线/调整/夹取与中文理由文案。 |
-| `tests/test_knowledge_api.py` | 知识库 API：上传→分析自动总结、列表/分页/筛选、详情、概览、重建、未分析 409、非法维度 400、重分析替换与推荐强度预览静态文件。 |
+| `tests/test_learning_summary.py` | 学习总结分类与推荐强度纯函数：8 维词表命中、测量补充、每维/总量上限与 12 标签均衡预算、主分类回退、强度基线/调整/夹取与中文理由文案。 |
+| `tests/test_knowledge_api.py` | 知识库 API：上传→分析自动总结、列表/分页/目录筛选（标签/维度/风格/主分类）、近似搜索与 typo、详情（含人工选择方向）、概览与 `style_tags`、重建、未分析 409、非法维度 400、重分析替换与推荐强度预览静态文件。 |
 
 ### 验证命令与当前基线
 
 ```powershell
 # Python 回归（.pytest_cache 在本工作区有 ACL 限制，必须加 -p no:cacheprovider）
 .\.venv\Scripts\python.exe -m pytest tests -q -W error -p no:cacheprovider
-# => 全量通过（数量见 pytest 摘要）
+# => 434 passed（26 个测试文件）
 
 # Lightroom 插件静态/运行时校验（package, syntax, json_runtime, bridge_runtime,
 # review_recall, watcher_guard, topmost_helper 全部通过）
@@ -503,7 +520,8 @@ Lightroom 桥接另有用户目录（不在项目 data 根下）：`<Lightroom �
 - 上传限制现在是「Content-Length 前置 413 + 分块读取时业务上限」两层，前置检查只信任客户端声明且仍会把整个文件读入内存，公网部署仍需代理/ASGI request-body limit。
 - 没有认证、账户、配额和删除/保留 API；只对带非 loopback `Origin` 的写请求返回 403（无 Origin 允许，兼容 Lightroom Lua 与命令行），不是完整的 CSRF/浏览器安全边界。
 - JSON repository 和进程内锁适合单进程本地 MVP，不适合多进程或多主机部署。
-- Phase 2 学习总结的分类与推荐强度是确定性规则（分析文本关键词 + 图像测量 + 风格参数幅度），不额外调用模型；标签质量取决于 Provider 分析措辞，互斥标签对与词表覆盖有限，新题材/新风格需扩充 `app/services/learning_summary.py`。
-- 知识库的筛选、排序与分页在进程内基于全部总结 JSON 完成；记录规模很大时应引入索引或数据库，当前实现以本地单进程 MVP 为准。
+- Phase 2 学习总结的分类与推荐强度是确定性规则（分析文本关键词 + 图像测量 + 风格参数幅度），不额外调用模型；标签质量取决于 Provider 分析措辞，互斥标签对与词表覆盖有限，新题材/新风格需扩充 `app/services/learning_summary.py`。标签总量预算 12、每维最多 2 个，并先保证每个维度至少一个标签，避免人像风格/环境背景等尾部维度被高频维度挤空；扩大词表或维度时要同步更新均衡预算与测试。
+- 知识库的筛选、近似搜索、排序与分页在进程内基于全部总结 JSON 完成；近似搜索为子串 + `SequenceMatcher`（阈值 0.55）的确定性启发式，不是语义向量检索；记录规模很大时应引入索引或数据库，当前实现以本地单进程 MVP 为准。
 - 学习总结是派生数据：分析变化会删除旧总结与旧预览，需要回填或修复时用 `POST /api/knowledge/summaries/{photo_id}/rebuild` 重建。
+- 人工选择（`PhotoSession.manual_edit`）只在用户通过网页预览或导出后写入；它不进入学习总结 JSON，而是在知识库详情读取时实时补充，重新分析会清除该记录；Lightroom 插件与 DSH 插件面板暂未展示这份人工选择信息。
 - 前端仍集中在单个 HTML 文件，继续扩展时应拆分 CSS、JS 和组件测试。

@@ -119,7 +119,7 @@ export function registerTools(ctx, { service, config }) {
     ctx.tools.register({
       name: 'photo_agent_analyze',
       description:
-        '上传本地照片或复用已有 photo_id，调用本机 AI Photo Agent 做视觉诊断，返回总体诊断、技术/构图/色彩观察和恰好 3 套 Lightroom 修图风格。用户要求分析照片、给修图建议时使用。分析通常 20-60 秒；成功后可用 photo_agent_preview 查看近似预览。',
+        '上传本地照片或复用已有 photo_id，调用本机 AI Photo Agent 做视觉诊断，返回总体诊断、技术/构图/色彩观察和恰好 3 套 Lightroom 修图风格。黑白只在画面适合时出现；分析会参考同系列照片，尽量保持一组照片的风格方向一致。用户要求分析照片、给修图建议时使用。分析通常 20-60 秒；成功后可用 photo_agent_preview 查看近似预览。',
       parameters: {
         type: 'object',
         properties: {

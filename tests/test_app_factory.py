@@ -15,14 +15,14 @@ from app.adapters.learning import MockLearningAnalysisProvider
 from app.adapters.openai_analysis import OpenAIAnalysisProvider
 from app.adapters.openai_learning import OpenAILearningAnalysisProvider
 from app.config import (
+    DEFAULT_CODEX_MODEL,
+    DEFAULT_CODEX_TIMEOUT_SECONDS,
     DEFAULT_DEEPSEEK_BASE_URL,
     DEFAULT_DEEPSEEK_MAX_RETRIES,
     DEFAULT_DEEPSEEK_MODEL,
     DEFAULT_DEEPSEEK_TIMEOUT_SECONDS,
     DEFAULT_MAX_IMAGE_PIXELS,
     DEFAULT_MAX_UPLOAD_BYTES,
-    DEFAULT_CODEX_MODEL,
-    DEFAULT_CODEX_TIMEOUT_SECONDS,
     DEFAULT_OPENAI_MAX_RETRIES,
     DEFAULT_OPENAI_MODEL,
     DEFAULT_OPENAI_TIMEOUT_SECONDS,
@@ -87,7 +87,7 @@ def test_frontend_avoids_dynamic_html_and_guards_stale_actions(tmp_path) -> None
     assert "state.photoId !== photoId" in html
     assert 'id="learningSection"' not in html
     assert "function setActiveView(view)" in html
-    assert "if (!state.knowledgeList && !knowledgeViewLoading)" in html
+    assert "if (isKnowledge && !state.knowledgeList && !knowledgeViewLoading)" in html
     assert "if (sequence !== knowledgeLoadSequence) return;" in html
     assert 'el("fileInput").addEventListener("change", uploadAndAnalyze)' in html
     assert 'id="uploadBtn"' not in html

@@ -5,8 +5,8 @@ from __future__ import annotations
 import copy
 
 from app.adapters.vision_models import (
-    StructuredPhotoAnalysis,
     StructuredEditingParameters,
+    StructuredPhotoAnalysis,
     strict_output_schema,
 )
 from app.schemas import (

@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from itertools import pairwise
 from pathlib import Path
 from typing import Annotated, Any, Literal
 
 from pydantic import (
+    AfterValidator,
     BaseModel,
     ConfigDict,
     Field,
@@ -17,12 +18,10 @@ from pydantic import (
 from app.services.parameter_specs import (
     PARAMETER_SPECS,
     SCALAR_SPECS,
-    ParameterSpec as ParameterSpec,
     SPECS_BY_KEY,
     clamp_value,
     is_neutral,
 )
-
 
 SUPPORTED_IMAGE_FORMATS = {"JPEG", "PNG", "TIFF", "CR3"}
 SUPPORTED_CONTENT_TYPES = {
@@ -34,6 +33,9 @@ SUPPORTED_CONTENT_TYPES = {
 HSL_CHANNELS = ("red", "orange", "yellow", "green", "aqua", "blue", "purple", "magenta")
 MAPPING_VERSION = "lightroom_xmp_v2"
 DEVELOP_SETTINGS_VERSION = "lightroom_develop_v1"
+# Bumped whenever the recommendation shape/meaning changes. Legacy analyses
+# (None) stay readable but are never used as series-consistency references.
+ANALYSIS_VERSION = "photo_analysis_v2"
 ImageFormat = Literal["JPEG", "PNG", "TIFF", "CR3"]
 ImageContentType = Literal["image/jpeg", "image/png", "image/tiff", "image/x-canon-cr3"]
 MAX_LEARNING_REFERENCES = 8
@@ -79,7 +81,18 @@ _NEUTRAL_NOISE_REDUCTION = {
 
 
 def utc_now() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
+
+
+def _as_utc(value: datetime) -> datetime:
+    """Normalize persisted timestamps so sorting/max never mixes naive and aware."""
+
+    if value.tzinfo is None or value.utcoffset() is None:
+        return value.replace(tzinfo=UTC)
+    return value.astimezone(UTC)
+
+
+UTCDateTime = Annotated[datetime, AfterValidator(_as_utc)]
 
 
 def is_xml_1_0_text(value: str) -> bool:
@@ -281,7 +294,7 @@ def build_advanced_from_overrides(overrides: list[Any]) -> dict[str, Any]:
             # Untrusted model output must never fail the whole analysis.
             continue
         data[spec.key] = (
-            round(clamped, 1) if spec.kind == "number" else int(round(clamped))
+            round(clamped, 1) if spec.kind == "number" else round(clamped)
         )
     return data
 
@@ -373,7 +386,7 @@ class EditingParametersV1(BaseModel):
             raise ValueError(f"unsupported HSL channels: {', '.join(unknown)}")
         return value
 
-    def scaled(self, intensity: float) -> "EditingParametersV1":
+    def scaled(self, intensity: float) -> EditingParametersV1:
         factor = max(0.0, min(1.0, intensity))
         if factor == 1.0:
             return self.model_copy(deep=True)
@@ -539,15 +552,48 @@ class ImageMetadata(BaseModel):
     render_source: Literal["original", "embedded_preview"] = "original"
 
 
+class SeriesReference(BaseModel):
+    """A previously analyzed photo the current recommendation was aligned to."""
+
+    photo_id: ResourceId
+    original_filename: str | None = Field(default=None, max_length=255)
+    kind: Literal["self", "duplicate", "sequence", "visual"]
+    similarity: float = Field(ge=0.0, le=1.0)
+    style_ids: list[StyleId] = Field(default_factory=list, max_length=3)
+    has_monochrome: bool = False
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class StyleSeries(BaseModel):
+    """How this analysis relates to an existing visual series.
+
+    ``locked`` means a different upload is visually the same photo and the
+    recommendation intentionally reuses the reference styles verbatim.
+    ``aligned`` means the model was asked to stay close to the series while the
+    parameters are still re-fit to this photo. ``context`` is a weak reference.
+    """
+
+    group_id: ResourceId
+    mode: Literal["locked", "aligned", "context"]
+    references: list[SeriesReference] = Field(default_factory=list, max_length=3)
+    note: str = Field(default="", max_length=500)
+
+    model_config = ConfigDict(extra="forbid")
+
+
 class ImageAnalysis(BaseModel):
     overall_summary: AnalysisParagraph
     technical_diagnosis: AnalysisItems
     composition_observations: AnalysisItems
     color_tone_observations: AnalysisItems
     recommended_styles: list[EditingStyle] = Field(min_length=3, max_length=3)
+    # Added at the end so analyses written before the field existed still load.
+    analysis_version: str | None = Field(default=None, max_length=64)
+    series: StyleSeries | None = None
 
     @model_validator(mode="after")
-    def require_three_styles(self) -> "ImageAnalysis":
+    def require_three_styles(self) -> ImageAnalysis:
         if len(self.recommended_styles) != 3:
             raise ValueError("analysis must include exactly 3 recommended styles")
         style_ids = [style.id for style in self.recommended_styles]
@@ -591,7 +637,7 @@ class LearningAnalysisResult(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     @model_validator(mode="after")
-    def reference_ids_must_be_unique(self) -> "LearningAnalysisResult":
+    def reference_ids_must_be_unique(self) -> LearningAnalysisResult:
         reference_ids = [reference.reference_id for reference in self.references]
         if len(reference_ids) != len(set(reference_ids)):
             raise ValueError("learning analysis reference ids must be unique")
@@ -601,7 +647,7 @@ class LearningAnalysisResult(BaseModel):
 class GeneratedAsset(BaseModel):
     path: Path
     url: str
-    created_at: datetime = Field(default_factory=utc_now)
+    created_at: UTCDateTime = Field(default_factory=utc_now)
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
@@ -615,7 +661,7 @@ class LearningReference(BaseModel):
     image_url: str
     metadata: ImageMetadata
     analysis: LearningReferenceAnalysis | None = None
-    created_at: datetime = Field(default_factory=utc_now)
+    created_at: UTCDateTime = Field(default_factory=utc_now)
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
@@ -625,7 +671,7 @@ class LearningSession(BaseModel):
     topic: str = Field(min_length=1, max_length=120)
     references: list[LearningReference] = Field(default_factory=list)
     summary: LearningSummary | None = None
-    created_at: datetime = Field(default_factory=utc_now)
+    created_at: UTCDateTime = Field(default_factory=utc_now)
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
@@ -638,11 +684,40 @@ class LearningSession(BaseModel):
         return topic
 
     @model_validator(mode="after")
-    def reference_ids_must_be_unique(self) -> "LearningSession":
+    def reference_ids_must_be_unique(self) -> LearningSession:
         reference_ids = [reference.id for reference in self.references]
         if len(reference_ids) != len(set(reference_ids)):
             raise ValueError("learning session reference ids must be unique")
         return self
+
+
+class PhotoManualEdit(BaseModel):
+    """用户主动选择过的风格与强度（最近一次）。
+
+    记录它，知识库才能区分「系统推荐过什么」和「用户真正选了什么」，
+    并在详情里额外展示这条人工选择的修图方向。
+    """
+
+    style_id: StyleId
+    style_name: AnalysisTitle
+    intensity: float = Field(ge=0.0, le=1.0)
+    parameters_summary: AnalysisParagraph
+    effective_strength: float = Field(ge=0.0, le=1.0)
+    verified: bool = True
+    warnings: list[str] = Field(default_factory=list)
+    # Same-origin preview asset for the manually chosen parameters, when one
+    # has been rendered. Export-only selections usually keep the earlier
+    # preview URL so the knowledge note can still show the chosen look.
+    preview_url: str | None = Field(default=None, max_length=2048)
+    source: Literal["preview", "export"] = "preview"
+    updated_at: UTCDateTime = Field(default_factory=utc_now)
+
+    model_config = ConfigDict(extra="forbid")
+
+    @field_validator("warnings")
+    @classmethod
+    def warnings_must_be_short(cls, value: list[str]) -> list[str]:
+        return [warning for warning in value if warning.strip()]
 
 
 class PhotoSession(BaseModel):
@@ -658,7 +733,11 @@ class PhotoSession(BaseModel):
     analysis: ImageAnalysis | None = None
     preview_files: dict[str, GeneratedAsset] = Field(default_factory=dict)
     preset_files: dict[str, GeneratedAsset] = Field(default_factory=dict)
-    created_at: datetime = Field(default_factory=utc_now)
+    # The most recent style/intensity the user explicitly asked to preview or
+    # export. Cleared whenever the analysis changes because the old style ids
+    # no longer refer to the current recommendations.
+    manual_edit: PhotoManualEdit | None = None
+    created_at: UTCDateTime = Field(default_factory=utc_now)
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
@@ -829,7 +908,7 @@ class LearningReferenceResponse(BaseModel):
     image_url: str
     metadata: ImageMetadata
     analysis: LearningReferenceAnalysis | None = None
-    created_at: datetime
+    created_at: UTCDateTime
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -839,7 +918,7 @@ class LearningSessionResponse(BaseModel):
     topic: str
     references: list[LearningReferenceResponse]
     summary: LearningSummary | None = None
-    created_at: datetime
+    created_at: UTCDateTime
 
     model_config = ConfigDict(from_attributes=True)
 

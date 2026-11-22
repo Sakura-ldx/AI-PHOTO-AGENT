@@ -5,7 +5,7 @@ import os
 import re
 import shutil
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
@@ -19,7 +19,6 @@ from app.schemas import (
     LightroomStatusResponse,
 )
 
-
 BASE_DIR = Path(__file__).resolve().parents[2]
 PLUGIN_SOURCE_DIR = BASE_DIR / "lightroom" / "AIPhotoAgent.lrplugin"
 PLUGIN_FOLDER_NAME = "AIPhotoAgent.lrplugin"
@@ -29,6 +28,17 @@ JOB_SCHEMA_VERSION = "aipa_lightroom_job_v1"
 DEFAULT_SERVER_URL = "http://127.0.0.1:8000"
 MAX_PRESET_FILENAME_LENGTH = 120
 _UNSAFE_FILENAME_CHARACTERS = re.compile(r'[<>:"/\\|?*\x00-\x1f]')
+_WINDOWS_RESERVED_NAMES = frozenset(
+    {
+        "CON",
+        "PRN",
+        "AUX",
+        "NUL",
+        "CLOCK$",
+        *(f"COM{index}" for index in range(1, 10)),
+        *(f"LPT{index}" for index in range(1, 10)),
+    }
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -321,7 +331,7 @@ class LightroomBridge:
         locations: LightroomLocations,
         preset_path: Path,
     ) -> str:
-        created_at = datetime.now(timezone.utc)
+        created_at = datetime.now(UTC)
         job_id = f"job_{created_at.strftime('%Y%m%d%H%M%S%f')}_{uuid4().hex[:8]}"
         payload: dict[str, Any] = {
             "schema_version": JOB_SCHEMA_VERSION,
@@ -375,7 +385,12 @@ def _safe_preset_filename(preset_name: str) -> str:
     cleaned = _UNSAFE_FILENAME_CHARACTERS.sub("_", preset_name).strip(" .")
     if not cleaned:
         cleaned = "AI Photo Agent Preset"
-    return cleaned[:MAX_PRESET_FILENAME_LENGTH].rstrip(" .")
+    cleaned = cleaned[:MAX_PRESET_FILENAME_LENGTH].rstrip(" .")
+    # Windows rejects device names even when they have an extension. The
+    # final file is ``<stem>.xmp``, so check the first dot-separated segment.
+    if cleaned.split(".", 1)[0].upper() in _WINDOWS_RESERVED_NAMES:
+        cleaned = f"_{cleaned}"[:MAX_PRESET_FILENAME_LENGTH]
+    return cleaned
 
 
 def _atomic_write_bytes(path: Path, content: bytes) -> None:

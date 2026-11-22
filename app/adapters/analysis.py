@@ -4,6 +4,8 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 
 from app.schemas import (
+    ANALYSIS_VERSION,
+    AdvancedParameters,
     ColorGrading,
     ColorGradingWheel,
     CropSuggestion,
@@ -20,15 +22,30 @@ from app.schemas import (
 
 class AnalysisProvider(ABC):
     @abstractmethod
-    def analyze(self, image_path: Path, metadata: ImageMetadata) -> ImageAnalysis:
+    def analyze(
+        self,
+        image_path: Path,
+        metadata: ImageMetadata,
+        *,
+        consistency_context: str = "",
+    ) -> ImageAnalysis:
         """Analyze an uploaded image and return style recommendations."""
 
 
 class MockAnalysisProvider(AnalysisProvider):
     """Deterministic provider for local MVP development and tests."""
 
-    def analyze(self, image_path: Path, metadata: ImageMetadata) -> ImageAnalysis:
-        del image_path
+    def __init__(self, *, include_monochrome: bool = False) -> None:
+        self.include_monochrome = include_monochrome
+
+    def analyze(
+        self,
+        image_path: Path,
+        metadata: ImageMetadata,
+        *,
+        consistency_context: str = "",
+    ) -> ImageAnalysis:
+        del image_path, consistency_context
         orientation = "横幅" if metadata.width >= metadata.height else "竖幅"
         megapixels = round((metadata.width * metadata.height) / 1_000_000, 1)
         summary = (
@@ -51,13 +68,18 @@ class MockAnalysisProvider(AnalysisProvider):
             color_tone_observations=[
                 "自然风格适合低饱和、轻对比，保持真实肤色或环境色。",
                 "电影风格适合压高光、抬阴影，并加入冷暖分离。",
-                "黑白风格适合加强对比和局部清晰度，突出形状与光影。",
+                "柔光胶片适合轻微褪色、柔和高光和克制的绿色偏移。",
             ],
             recommended_styles=[
                 self._natural_style(),
                 self._cinematic_style(),
-                self._black_white_style(),
+                (
+                    self._black_white_style()
+                    if self.include_monochrome
+                    else self._soft_film_style()
+                ),
             ],
+            analysis_version=ANALYSIS_VERSION,
         )
 
     def _natural_style(self) -> EditingStyle:
@@ -156,15 +178,67 @@ class MockAnalysisProvider(AnalysisProvider):
             ),
         )
 
+    def _soft_film_style(self) -> EditingStyle:
+        return EditingStyle(
+            id="soft-film-muted",
+            name="柔光胶片",
+            description="轻褪色、柔和对比和克制的绿色偏移，保留胶片般的空气感。",
+            best_fit_reason="适合光线柔和、色彩不过分抢眼的日常照片，能增加耐看的质感。",
+            expected_visual_impact="高光更柔和，暗部略微抬起，颜色更克制。",
+            rationale="用轻 tone curve、低饱和和少量色彩分级做出胶片感，而不是压成黑白。",
+            parameters=EditingParametersV1(
+                exposure=0.15,
+                contrast=6,
+                highlights=-30,
+                shadows=28,
+                whites=2,
+                blacks=-6,
+                temperature=5,
+                tint=3,
+                vibrance=6,
+                saturation=-14,
+                texture=3,
+                clarity=6,
+                dehaze=-3,
+                tone_curve=[
+                    ToneCurvePoint(x=0, y=12),
+                    ToneCurvePoint(x=48, y=48),
+                    ToneCurvePoint(x=128, y=128),
+                    ToneCurvePoint(x=205, y=208),
+                    ToneCurvePoint(x=255, y=244),
+                ],
+                hsl={
+                    "orange": HslAdjustment(saturation=-4, luminance=5),
+                    "yellow": HslAdjustment(hue=-4, saturation=-12, luminance=2),
+                    "green": HslAdjustment(hue=-8, saturation=-18, luminance=-2),
+                    "blue": HslAdjustment(saturation=-10, luminance=3),
+                },
+                color_grading=ColorGrading(
+                    shadows=ColorGradingWheel(hue=110, saturation=7, luminance=1),
+                    midtones=ColorGradingWheel(hue=45, saturation=4, luminance=1),
+                    highlights=ColorGradingWheel(hue=52, saturation=5, luminance=2),
+                    blending=52,
+                    balance=4,
+                ),
+                sharpening=Sharpening(amount=38, radius=1.0, detail=22, masking=25),
+                noise_reduction=NoiseReduction(luminance=10, color=25),
+                crop_suggestion=CropSuggestion(
+                    aspect_ratio="original",
+                    rationale="保留原比例，让胶片感来自影调和色彩而不是裁切。",
+                ),
+            ),
+        )
+
     def _black_white_style(self) -> EditingStyle:
         return EditingStyle(
             id="contrast-bw",
             name="高反差黑白",
             description="去除色彩干扰，加强明暗结构、纹理和主体轮廓。",
             best_fit_reason="当画面线条、光影或人物表情较强时，黑白能突出结构。",
-            expected_visual_impact="色彩被压低，明暗对比增强，画面更聚焦。",
-            rationale="用低饱和和强结构参数模拟黑白工作流，保留可调空间。",
+            expected_visual_impact="色彩被去除，明暗对比增强，画面更聚焦。",
+            rationale="用真正的黑白转换和强结构参数突出形状与光影。",
             parameters=EditingParametersV1(
+                advanced=AdvancedParameters(black_and_white=True),
                 exposure=0.1,
                 contrast=38,
                 highlights=-18,

@@ -12,6 +12,7 @@ from app.schemas import EditingParametersV1, EditingStyle, ImageAnalysis, ImageM
 from app.services.learning_summary import (
     BASELINE_RECOMMENDED_INTENSITY,
     MAX_RECOMMENDED_INTENSITY,
+    MAX_TAGS_TOTAL,
     MIN_RECOMMENDED_INTENSITY,
     OPPOSITE_LABEL_PAIRS,
     RECOMMENDED_INTENSITY_STEP,
@@ -227,7 +228,7 @@ def test_measurements_alone_supply_tags() -> None:
     assert ("issue", "对比不足") in keys
 
 
-def test_measurements_fill_all_six_dimensions() -> None:
+def test_measurements_fill_the_six_measurable_dimensions() -> None:
     analysis = _analysis(
         overall="一张风光照片，采用逆光拍摄",
         technical=("暗部细节不足",),
@@ -237,8 +238,12 @@ def test_measurements_fill_all_six_dimensions() -> None:
     measurements = _measurements(p50=100, p05=40, p95=120, clip_low=0.05)
     result = classify_analysis(analysis, measurements, _metadata())
 
+    # The histogram can only speak for exposure, colour and contrast; the
+    # portrait (framing style of a person) and environment dimensions are
+    # reserved for the analysis wording and must not be invented by it.
+    measurable = {"subject", "light", "color", "tone", "composition", "issue"}
     dimensions = {tag.dimension for tag in result.tags}
-    assert dimensions == set(TAG_DIMENSIONS)
+    assert dimensions == measurable
     keys = _tag_keys(result)
     assert ("subject", "风光") in keys
     assert ("light", "逆光") in keys
@@ -335,11 +340,29 @@ def test_tag_budgets_are_enforced_per_dimension_and_in_total() -> None:
     )
     result = classify_analysis(analysis, measurements, _metadata())
 
-    assert len(result.tags) <= 8
+    assert len(result.tags) <= MAX_TAGS_TOTAL
     counts = Counter(tag.dimension for tag in result.tags)
     assert all(count <= 2 for count in counts.values())
     keys = _tag_keys(result)
     assert len(keys) == len(result.tags)
+
+
+def test_balanced_budget_keeps_portrait_and_environment_dimensions() -> None:
+    analysis = _analysis(
+        overall="室内环境人像特写，棚拍布光，情绪人像，背景虚化，城市环境中的生活感人像。",
+        technical=("逆光侧光，柔光，轻微曝光不足",),
+        composition=("半身像构图，竖幅取景，三分法构图",),
+        color_tone=("低饱和肤色，暖色调，柔和影调",),
+    )
+    result = classify_analysis(
+        analysis, _measurements(), _metadata(width=600, height=900)
+    )
+
+    dimensions = {tag.dimension for tag in result.tags}
+    assert {"portrait", "environment"} <= dimensions
+    assert len(result.tags) <= MAX_TAGS_TOTAL
+    counts = Counter(tag.dimension for tag in result.tags)
+    assert all(count <= 2 for count in counts.values())
 
 
 def test_tags_always_come_from_the_controlled_vocabulary() -> None:
@@ -358,12 +381,20 @@ def test_tags_always_come_from_the_controlled_vocabulary() -> None:
         assert tag.label in TAG_LABELS_BY_DIMENSION[tag.dimension]
 
 
-def test_vocabulary_covers_six_dimensions() -> None:
+def test_vocabulary_covers_all_eight_dimensions() -> None:
     assert set(TAG_LABELS_BY_DIMENSION) == set(TAG_DIMENSIONS)
     for dimension, labels in TAG_LABELS_BY_DIMENSION.items():
-        assert 1 <= len(labels) <= 12, dimension
+        assert len(labels) == 12, dimension
         assert len(set(labels)) == len(labels), dimension
         assert all(isinstance(label, str) and label for label in labels)
+    # The knowledge base filters on (dimension, label), so two dimensions may
+    # not use the exact same wording for different concepts.
+    all_labels = [
+        label
+        for dimension, labels in TAG_LABELS_BY_DIMENSION.items()
+        for label in labels
+    ]
+    assert len(all_labels) == len(set(all_labels))
 
 
 def test_composition_orientation_comes_from_metadata() -> None:
@@ -422,6 +453,7 @@ def test_opposite_label_pairs_are_defined_inside_the_vocabulary() -> None:
     assert ("高对比", "低对比") in OPPOSITE_LABEL_PAIRS["tone"]
     assert ("横幅", "竖幅") in OPPOSITE_LABEL_PAIRS["composition"]
     assert ("曝光不足", "曝光过度") in OPPOSITE_LABEL_PAIRS["issue"]
+    assert ("室内环境", "户外环境") in OPPOSITE_LABEL_PAIRS["environment"]
 
 
 def test_text_only_opposite_tags_cancel_each_other() -> None:
@@ -486,7 +518,7 @@ def test_resolution_keeps_primary_and_budgets_consistent() -> None:
     assert result.primary_category == "风光"
     assert ("subject", "风光") in keys
     assert len(keys) == len(result.tags), "(dimension, label) pairs must be unique"
-    assert len(result.tags) <= 8
+    assert len(result.tags) <= MAX_TAGS_TOTAL
     counts = Counter(tag.dimension for tag in result.tags)
     assert all(count <= 2 for count in counts.values())
     for tag in result.tags:
@@ -497,6 +529,131 @@ def test_resolution_keeps_primary_and_budgets_consistent() -> None:
 
     # Resolution is deterministic, so a second run must be identical.
     assert result == classify_analysis(analysis, measurements, _metadata())
+
+
+# --------------------------------------------------------------------------- #
+# Classification: portrait and environment dimensions
+# --------------------------------------------------------------------------- #
+
+
+def _labels(classification, dimension: str) -> list[str]:
+    return [tag.label for tag in classification.tags if tag.dimension == dimension]
+
+
+def test_chinese_portrait_keywords_map_to_portrait_tags() -> None:
+    framing = classify_analysis(
+        _analysis(overall="这张照片是半身像特写"),
+        _measurements(),
+        _metadata(),
+    )
+    assert _labels(framing, "portrait") == ["特写", "半身像"]
+    assert all(
+        tag.source == "analysis"
+        for tag in framing.tags
+        if tag.dimension == "portrait"
+    )
+
+    mood = classify_analysis(
+        _analysis(overall="棚拍布光，人物情绪自然，复古风格"),
+        _measurements(),
+        _metadata(),
+    )
+    assert _labels(mood, "portrait") == ["棚拍", "情绪人像"]
+
+
+def test_chinese_environment_keywords_map_to_environment_tags() -> None:
+    indoors = classify_analysis(
+        _analysis(overall="照片拍摄于室内环境，背景虚化"),
+        _measurements(),
+        _metadata(),
+    )
+    assert _labels(indoors, "environment") == ["室内环境", "虚化背景"]
+
+    outdoors = classify_analysis(
+        _analysis(overall="照片拍摄于海边、森林与夜景"),
+        _measurements(),
+        _metadata(),
+    )
+    assert _labels(outdoors, "environment") == ["海岸", "森林"]
+
+
+def test_english_portrait_and_environment_keywords_use_word_boundaries() -> None:
+    analysis = _analysis(
+        overall=(
+            "A close-up portrait shot outdoors in a forest with a blurred "
+            "background."
+        ),
+    )
+    result = classify_analysis(analysis, _measurements(), _metadata())
+    assert _labels(result, "portrait") == ["特写"]
+    assert _labels(result, "environment") == ["户外环境", "森林"]
+    assert ("environment", "城市环境") not in _tag_keys(result)
+
+    urbanite = classify_analysis(
+        _analysis(overall="An urbanite street scene with a minimal background."),
+        _measurements(),
+        _metadata(),
+    )
+    keys = _tag_keys(urbanite)
+    # "urbanite" is not the word "urban"; only the street/minimal cues apply.
+    assert ("environment", "城市环境") not in keys
+    assert ("environment", "街头环境") in keys
+    assert ("environment", "极简背景") in keys
+
+
+def test_indoor_and_outdoor_environment_tags_cancel_each_other() -> None:
+    # The analysis hedges about where the photo could be taken. Both labels come
+    # from the same source, so neither is trustworthy (OPPOSITE_LABEL_PAIRS).
+    analysis = _analysis(overall="拍摄环境既可能是室内，也可能是户外")
+    result = classify_analysis(analysis, _measurements(), _metadata())
+    assert _labels(result, "environment") == []
+
+
+def test_new_dimensions_do_not_change_the_primary_category() -> None:
+    with_subject = classify_analysis(
+        _analysis(overall="室内人像特写"),
+        _measurements(),
+        _metadata(),
+    )
+    assert with_subject.primary_category == "人像"
+    assert _labels(with_subject, "portrait") == ["特写"]
+    assert _labels(with_subject, "environment") == ["室内环境"]
+
+    without_subject = classify_analysis(
+        _analysis(overall="照片以特写方式呈现，整体极简背景"),
+        _measurements(),
+        _metadata(),
+    )
+    assert without_subject.primary_category == FALLBACK_CATEGORY
+    assert _labels(without_subject, "portrait") == ["特写"]
+    assert ("environment", "极简背景") in _tag_keys(without_subject)
+
+
+def test_new_dimension_budgets_are_still_enforced() -> None:
+    analysis = _analysis(
+        overall=(
+            "特写半身像全身像环境人像棚拍生活感人像情绪人像集体照"
+            "儿童人像复古人像时尚人像逆光人像"
+        ),
+        technical=(
+            (
+                "室内户外城市自然环境海岸森林山野街头极简背景纯色背景"
+                "虚化背景夜景"
+            ),
+        ),
+    )
+    result = classify_analysis(analysis, _measurements(), _metadata())
+
+    assert len(result.tags) <= MAX_TAGS_TOTAL
+    counts = Counter(tag.dimension for tag in result.tags)
+    assert all(count <= 2 for count in counts.values())
+    keys = _tag_keys(result)
+    assert len(keys) == len(result.tags), "(dimension, label) pairs must be unique"
+    for tag in result.tags:
+        assert tag.label in TAG_LABELS_BY_DIMENSION[tag.dimension]
+    for dimension, pairs in OPPOSITE_LABEL_PAIRS.items():
+        for left, right in pairs:
+            assert not {(dimension, left), (dimension, right)} <= keys
 
 
 # --------------------------------------------------------------------------- #

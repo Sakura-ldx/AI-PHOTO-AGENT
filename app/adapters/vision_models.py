@@ -6,6 +6,8 @@ from typing import Any, Literal
 from pydantic import BaseModel, Field
 
 from app.schemas import (
+    ANALYSIS_VERSION,
+    MAX_LEARNING_REFERENCES,
     AnalysisItems,
     AnalysisParagraph,
     AnalysisTitle,
@@ -15,7 +17,6 @@ from app.schemas import (
     ImageAnalysis,
     LearningReferenceAnalysis,
     LearningSummary,
-    MAX_LEARNING_REFERENCES,
     NoiseReduction,
     Sharpening,
     StyleId,
@@ -24,8 +25,7 @@ from app.schemas import (
 )
 from app.services.parameter_specs import override_key_list_text
 
-
-PHOTO_PROMPT_VERSION = "photo-analysis-v5"
+PHOTO_PROMPT_VERSION = "photo-analysis-v6"
 LEARNING_PROMPT_VERSION = "learning-analysis-v1"
 _PHOTO_SYSTEM_PROMPT_HEAD = """\
 你是一名专业照片编辑师和 Lightroom 参数设计师。
@@ -42,13 +42,21 @@ _PHOTO_SYSTEM_PROMPT_HEAD = """\
    饱和度、中调相对 18% 灰的 EV）。这些数值可信，必须优先于你的肉眼估计：
    先用数值定位曝光、白平衡和影调压缩问题，再决定参数；rationale 里要能对上这些数字。
 3. 必须返回恰好 3 个彼此明显不同、适合当前照片的编辑风格。每套风格要有独立的编辑意图，
-   不能只是同一套思路的强弱变化，也不能只换名字。
-4. 不要默认使用“中性/偏暖/偏冷”三分法，也不要把白平衡冷暖当作唯一的主要区分。至少一套
-   风格必须以非白平衡维度为主导，例如黑白、低调/高调、低饱和、强对比质感、柔焦/空气感、
-   裁切或纹理。三个风格应至少在两个非白平衡维度上明显不同（曝光意图、对比与通透、饱和度
-   与色彩策略、裁切与质感）。即使照片适合暖调，也不要让三套方案都围绕色温做文章。
-5. style id 使用简短的小写英文、数字、连字符或下划线，且 3 个 id 唯一。
-6. 参数标定（按这个量级给值，宁准勿虚）：
+   不能只是同一套思路的强弱变化，也不能只换名字。黑白不是必选项：不要为了凑第三套而
+   硬加黑白；如果这张照片不适合黑白，第三套请用另一种真正不同的色彩分级、光线、对比、
+   裁切或纹理方向。
+4. 黑白只在画面确实受益于去色时推荐：明暗/光影层次、线条/几何/建筑、纹理/质感、人物
+   形体/剪影、色彩干扰主体、极简或舞台硬光。以下场景不要给黑白：花卉、美食、日落/朝霞、
+   霓虹、彩妆、鲜艳服饰/儿童彩色场景等“色彩本身就是主体信息”的照片。若推荐黑白，必须
+   在 parameters.overrides 中写 {"key": "black_and_white", "value": 1}，不能只用
+   saturation=-100 模拟；best_fit_reason 必须写具体受益点（明暗、光影、线条、纹理、
+   形体、结构、去色简化、色彩干扰等），不能只写“更有质感/更高级”。
+5. 不要默认使用“中性/偏暖/偏冷”三分法，也不要把白平衡冷暖当作唯一的主要区分。三个风格
+   应至少在两个非白平衡维度上明显不同（曝光意图、对比与通透、饱和度与色彩策略、裁切与
+   质感）。即使照片适合暖调，也不要让三套方案都围绕色温做文章。三套方案应适合当前照片的
+   实际潜力，不要用同一套思路换三个名字。
+6. style id 使用简短的小写英文、数字、连字符或下划线，且 3 个 id 唯一。
+7. 参数标定（按这个量级给值，宁准勿虚）：
    - exposure 以 EV 计：+1.0 是整体明显提亮一档。夜景人像常见 +0.3~+0.9，
      不要习惯性只给 0.1。
    - highlights / shadows 是局部恢复：夜景人像 shadows 常见 +25~+60，
@@ -59,14 +67,14 @@ _PHOTO_SYSTEM_PROMPT_HEAD = """\
      +10~+30 以保护肤色。
    - clarity / dehaze 负责通透度：雾霾、灰蒙或隔着玻璃拍摄的场景 dehaze +10~+30。
    - 某项确实不需要调整时给 0，不要给一个象征性的小数值。
-7. 所有参数必须在结构定义的范围内；tone curve 从 x=0 开始、x=255 结束，
+8. 所有参数必须在结构定义的范围内；tone curve 从 x=0 开始、x=255 结束，
    x 严格递增；HSL 必须给出结构要求的全部颜色通道。
-8. rationale 和 best_fit_reason 必须说明图片证据（含测量数值）与参数选择之间的关系。
-9. 输出长度受限制：overall_summary 控制在 200 字以内；technical_diagnosis /
+9. rationale 和 best_fit_reason 必须说明图片证据（含测量数值）与参数选择之间的关系。
+10. 输出长度受限制：overall_summary 控制在 200 字以内；technical_diagnosis /
    composition_observations / color_tone_observations 各不超过 6 条、每条不超过 60 字；
    每套风格的 description / best_fit_reason / expected_visual_impact / rationale /
    crop_suggestion.rationale 各不超过 80 字。JSON 必须完整结束，宁可少写字也不要被截断。
-10. 需要更精细的 Lightroom 调整时写进 parameters.overrides，元素形如
+11. 需要更精细的 Lightroom 调整时写进 parameters.overrides，元素形如
     {"key": "<下方列表里的 key>", "value": <数字>, "points": []}。只写真正需要的项，
     每套风格最多 8 项，不需要就返回空数组 []。points 只在分通道曲线时使用
     （形如 [[0,0],[128,140],[255,255]]），其余情况返回 []。不要重复基本字段已表达的效果。
@@ -173,7 +181,9 @@ class StructuredPhotoAnalysis(BaseModel):
                 for channel, adjustment in parameters["hsl"].items()
                 if any(adjustment.values())
             }
-        return ImageAnalysis.model_validate(payload)
+        return ImageAnalysis.model_validate(payload).model_copy(
+            update={"analysis_version": ANALYSIS_VERSION}
+        )
 
 
 class StructuredLearningAnalysis(BaseModel):
@@ -202,7 +212,7 @@ def photo_measurements_block(image_path: Path) -> str:
         from app.services.measurements import describe_for_prompt, measure_file
 
         return describe_for_prompt(measure_file(image_path))
-    except Exception:  # pragma: no cover - defensive, measurement is best effort
+    except Exception:  # noqa: BLE001 - measurement is optional prompt context
         return ""
 
 

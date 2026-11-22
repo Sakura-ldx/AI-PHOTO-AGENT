@@ -14,7 +14,6 @@ from app.schemas import (
     LearningSessionResponse,
 )
 
-
 router = APIRouter(prefix="/api/learning/sessions", tags=["learning"])
 Services = Annotated[ServiceContainer, Depends(get_services)]
 ERROR_RESPONSE = {"model": ErrorResponse}

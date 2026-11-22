@@ -7,14 +7,18 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 from uuid import NAMESPACE_URL, uuid4, uuid5
 
-from app.schemas import EditingParametersV1, HSL_CHANNELS, MAPPING_VERSION, is_xml_1_0_text
+from app.schemas import (
+    HSL_CHANNELS,
+    MAPPING_VERSION,
+    EditingParametersV1,
+    is_xml_1_0_text,
+)
 from app.services.parameter_specs import (
     CURVE_SPECS,
     PARAMETER_SPECS,
     encode_for_lightroom,
     is_neutral,
 )
-
 
 XMP_META_NS = "adobe:ns:meta/"
 RDF_NS = "http://www.w3.org/1999/02/22-rdf-syntax-ns#"
@@ -44,7 +48,11 @@ def write_xmp_preset(
             os.fsync(output.fileno())
         os.replace(temp_path, output_path)
     finally:
-        temp_path.unlink(missing_ok=True)
+        try:
+            temp_path.unlink(missing_ok=True)
+        except OSError:
+            # Cleanup must not mask the write/replace error that got us here.
+            pass
     return output_path
 
 

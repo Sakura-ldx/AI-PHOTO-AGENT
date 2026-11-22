@@ -10,7 +10,6 @@ import sys
 import tempfile
 from pathlib import Path
 
-
 BASE_DIR = Path(__file__).resolve().parents[1]
 PLUGIN_DIR = BASE_DIR / "lightroom" / "AIPhotoAgent.lrplugin"
 DEFAULT_TOOLS_DIR = BASE_DIR / "data" / "runtime" / "tools"
@@ -49,7 +48,7 @@ def validate_syntax(luaparser_module) -> dict:
     for file in files:
         try:
             luaparser_module.parse(file.read_text(encoding="utf-8"))
-        except Exception as exc:  # pragma: no cover - diagnostic branch
+        except Exception as exc:  # noqa: BLE001  # pragma: no cover - diagnostic branch
             failures.append({"file": file.name, "error": str(exc)})
     return {
         "checked": True,
@@ -274,7 +273,7 @@ return "bridge-poll-ok"
             "__ACTIONS_PATH__", f"{plugin_path}/Actions.lua"
         )
         result = lua.execute(script)
-    except Exception as exc:  # pragma: no cover - diagnostic branch
+    except Exception as exc:  # noqa: BLE001  # pragma: no cover - diagnostic branch
         return {"checked": True, "ok": False, "error": str(exc)}
     finally:
         shutil.rmtree(temp_root, ignore_errors=True)
@@ -288,15 +287,16 @@ def validate_json_module() -> dict:
         return {"checked": False, "message": "lupa is not installed; Json.lua runtime check skipped."}
 
     lua = LuaRuntime(unpack_returned_tuples=True)
+    json_path = str(PLUGIN_DIR / "Json.lua").replace("\\", "/")
     script = (
-        "local Json = dofile([[%s]])\n"
+        f"local Json = dofile([[{json_path}]])\n"
         "local value = Json.decode('{\"a\":[1,2,3],\"b\":\"中文\",\"c\":true}')\n"
         "assert(value.a[2] == 2 and value.b == '中文' and value.c == true)\n"
         "local encoded = Json.encode(value)\n"
         "local roundtrip = Json.decode(encoded)\n"
         "assert(roundtrip.a[3] == 3)\n"
         "return 'json-ok'\n"
-    ) % str(PLUGIN_DIR / "Json.lua").replace("\\", "/")
+    )
     output = lua.execute(script)
     return {"checked": True, "ok": output == "json-ok", "output": output}
 
@@ -519,7 +519,7 @@ return "review-recall-ok"
 """.replace("__PLUGIN_DIR__", plugin_dir)
     try:
         output = LuaRuntime(unpack_returned_tuples=True).execute(script)
-    except Exception as exc:  # pragma: no cover - diagnostic branch
+    except Exception as exc:  # noqa: BLE001  # pragma: no cover - diagnostic branch
         return {"checked": True, "ok": False, "error": str(exc)}
     return {"checked": True, "ok": output == "review-recall-ok", "output": output}
 
@@ -674,7 +674,7 @@ return "watcher-guard-ok"
 """.replace("__PLUGIN_DIR__", plugin_path)
     try:
         output = LuaRuntime(unpack_returned_tuples=True).execute(script)
-    except Exception as exc:  # pragma: no cover - diagnostic branch
+    except Exception as exc:  # noqa: BLE001  # pragma: no cover - diagnostic branch
         return {"checked": True, "ok": False, "error": str(exc)}
     return {"checked": True, "ok": output == "watcher-guard-ok", "output": output}
 
@@ -714,10 +714,11 @@ def validate_topmost_helper() -> dict:
         parsed = subprocess.run(
             [powershell, "-NoProfile", "-Command", parse_script],
             capture_output=True,
+            check=False,
             text=True,
             timeout=90,
         )
-    except Exception as exc:  # pragma: no cover - diagnostic branch
+    except Exception as exc:  # noqa: BLE001  # pragma: no cover - diagnostic branch
         return {"checked": True, "ok": False, "error": f"parse failed: {exc}"}
     if parsed.returncode != 0:
         return {
@@ -740,10 +741,11 @@ def validate_topmost_helper() -> dict:
                 "AIPA_VALIDATOR_NO_SUCH_WINDOW",
             ],
             capture_output=True,
+            check=False,
             text=True,
             timeout=120,
         )
-    except Exception as exc:  # pragma: no cover - diagnostic branch
+    except Exception as exc:  # noqa: BLE001  # pragma: no cover - diagnostic branch
         return {"checked": True, "ok": False, "error": f"smoke run failed: {exc}"}
     # 2 = helper ran correctly and found nothing, which is exactly what a
     # nonexistent prefix must produce. Any other code means a broken helper.

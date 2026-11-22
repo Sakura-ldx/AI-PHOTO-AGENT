@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 import os
 import re
 import shutil
@@ -8,7 +9,7 @@ from collections.abc import Iterator, Sequence
 from contextlib import contextmanager
 from pathlib import Path
 from threading import Lock, RLock
-from typing import Protocol, TypeVar
+from typing import ClassVar, Protocol, TypeVar
 from uuid import uuid4
 
 from PIL import Image
@@ -25,13 +26,14 @@ from app.errors import (
 )
 from app.knowledge_schemas import PhotoLearningSummary
 from app.schemas import (
+    MAX_LEARNING_REFERENCES,
     GeneratedAsset,
     ImageAnalysis,
     ImageFormat,
     ImageMetadata,
     LearningReference,
     LearningSession,
-    MAX_LEARNING_REFERENCES,
+    PhotoManualEdit,
     PhotoSession,
 )
 from app.services.image_formats import (
@@ -43,8 +45,8 @@ from app.services.image_formats import (
     write_oriented_jpeg,
 )
 
-
 RESOURCE_ID_PATTERN = re.compile(r"^[0-9a-f]{32}$")
+LOGGER = logging.getLogger(__name__)
 ModelT = TypeVar("ModelT", bound=BaseModel)
 
 
@@ -56,7 +58,7 @@ class UploadFileLike(Protocol):
 
 class FileStorage:
     _root_locks_guard = Lock()
-    _root_locks: dict[str, RLock] = {}
+    _root_locks: ClassVar[dict[str, RLock]] = {}
 
     def __init__(
         self,
@@ -99,6 +101,10 @@ class FileStorage:
         self.data_dir = self.root / "data"
         self.sessions_dir = self.data_dir / "sessions"
         self.learning_sessions_dir = self.data_dir / "learning_sessions"
+        # Per-photo visual signatures used to keep a shoot's styles consistent.
+        # Derived, disposable data: deleting this directory only makes the next
+        # analysis recompute the hashes.
+        self.signatures_dir = self.data_dir / "signatures"
         # Phase 2 learning summaries are private knowledge-base records. They are
         # never served directly; the API projects them into list/detail views.
         self.knowledge_dir = self.data_dir / "knowledge" / "summaries"
@@ -118,6 +124,7 @@ class FileStorage:
             self.exports_dir,
             self.sessions_dir,
             self.learning_sessions_dir,
+            self.signatures_dir,
             self.knowledge_dir,
         ):
             directory.mkdir(parents=True, exist_ok=True)
@@ -259,6 +266,35 @@ class FileStorage:
         with self._lock:
             return self._load_session_unlocked(photo_id)
 
+    def list_sessions(self) -> list[PhotoSession]:
+        """Return every readable photo session, newest first.
+
+        Used by series matching. A corrupt or foreign record is skipped with a
+        warning instead of failing the current analysis: consistency is a
+        best-effort enhancement, not a reason to lose a photo.
+        """
+
+        with self._lock:
+            try:
+                paths = sorted(self.sessions_dir.glob("*.json"))
+            except OSError as exc:
+                raise StorageOperationError("Unable to read stored photo sessions.") from exc
+            sessions: list[PhotoSession] = []
+            for path in paths:
+                if RESOURCE_ID_PATTERN.fullmatch(path.stem) is None:
+                    continue
+                try:
+                    session = self._load_model(path, PhotoSession, "photo session")
+                    self._validate_stored_id(session.id, path.stem, "photo session")
+                except (OSError, StoredDataError, ValidationError, ValueError) as exc:
+                    LOGGER.warning(
+                        "Skipping unreadable photo session %s: %s", path.name, exc
+                    )
+                    continue
+                sessions.append(session)
+        sessions.sort(key=lambda session: session.created_at, reverse=True)
+        return sessions
+
     def save_analysis(self, session: PhotoSession, analysis: ImageAnalysis) -> PhotoSession:
         with self._lock:
             latest = self._load_session_unlocked(session.id)
@@ -270,6 +306,7 @@ class FileStorage:
                 stale_preset_assets = list(latest.preset_files.values())
                 latest.preview_files = {}
                 latest.preset_files = {}
+                latest.manual_edit = None
             latest.analysis = analysis
             self._save_model(self.session_path(latest.id), latest)
             session.analysis = analysis
@@ -297,6 +334,19 @@ class FileStorage:
         with self._lock:
             latest = self._load_session_unlocked(photo_id)
             latest.preset_files[token] = asset
+            self._save_model(self.session_path(latest.id), latest)
+            return latest
+
+    def save_manual_edit(self, photo_id: str, edit: PhotoManualEdit) -> PhotoSession:
+        """Record the style/intensity the user explicitly picked.
+
+        Stored on the photo session itself (not in the derived knowledge
+        summary) so rebuilding the summary never loses the user's choice.
+        """
+
+        with self._lock:
+            latest = self._load_session_unlocked(photo_id)
+            latest.manual_edit = edit
             self._save_model(self.session_path(latest.id), latest)
             return latest
 
@@ -344,18 +394,19 @@ class FileStorage:
                 summaries.append(summary)
             return summaries
 
-    def prepare_knowledge_previews(self, photo_id: str) -> Path:
-        """Return a clean per-photo directory for learning-summary previews.
+    def ensure_knowledge_previews(self, photo_id: str) -> Path:
+        """Return the per-photo directory for learning-summary previews.
 
-        Rebuilding a summary must not accumulate orphaned JPEGs, so the whole
-        directory is replaced under the storage lock before new renders.
+        This is intentionally non-destructive: the previous summary and its
+        previews must stay readable if a rebuild fails before the new summary is
+        committed.  ``prune_knowledge_previews`` removes orphaned files only
+        after the new summary has been saved.
         """
 
         if RESOURCE_ID_PATTERN.fullmatch(photo_id) is None:
             raise InvalidRequestError("Invalid photo id.")
         with self._lock:
             directory = self.summary_previews_dir / photo_id
-            shutil.rmtree(directory, ignore_errors=True)
             try:
                 directory.mkdir(parents=True, exist_ok=True)
             except OSError as exc:
@@ -363,6 +414,45 @@ class FileStorage:
                     "Unable to prepare learning summary preview storage."
                 ) from exc
             return directory
+
+    def prune_knowledge_previews(
+        self,
+        photo_id: str,
+        keep_filenames: Sequence[str],
+    ) -> None:
+        """Delete preview files no longer referenced by the saved summary.
+
+        Pruning is best-effort derived-data maintenance.  A failure here must not
+        turn a successful summary rebuild into an error.
+        """
+
+        if RESOURCE_ID_PATTERN.fullmatch(photo_id) is None:
+            raise InvalidRequestError("Invalid photo id.")
+        keep = set(keep_filenames)
+        with self._lock:
+            directory = self.summary_previews_dir / photo_id
+            try:
+                entries = list(directory.iterdir())
+            except FileNotFoundError:
+                return
+            except OSError as exc:
+                LOGGER.warning(
+                    "Unable to inspect summary previews for photo_id=%s: %s",
+                    photo_id,
+                    exc,
+                )
+                return
+            for path in entries:
+                if path.name in keep or not path.is_file():
+                    continue
+                try:
+                    path.unlink()
+                except OSError as exc:
+                    LOGGER.warning(
+                        "Unable to prune stale summary preview %s: %s",
+                        path,
+                        exc,
+                    )
 
     def delete_knowledge_summary(self, photo_id: str) -> None:
         with self._lock:

@@ -1315,6 +1315,9 @@ window.__ModuleLoader__.load({
               { title: t('analysis.title') },
               h('p', { className: 'photo-note', style: { marginTop: 0 } }, t('analysis.byAi')),
               h('p', { className: 'photo-muted', style: { marginTop: 10 } }, analysis.overall_summary),
+              analysis.series && analysis.series.note
+                ? h('p', { className: 'photo-note' }, analysis.series.note)
+                : null,
               h(LabeledList, { title: t('analysis.technical'), items: analysis.technical_diagnosis }),
               h(LabeledList, { title: t('analysis.composition'), items: analysis.composition_observations }),
               h(LabeledList, { title: t('analysis.color'), items: analysis.color_tone_observations }),

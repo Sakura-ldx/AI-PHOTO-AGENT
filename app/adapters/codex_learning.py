@@ -14,10 +14,10 @@ from app.adapters.vision_models import (
 )
 from app.errors import ProviderOutputError
 from app.schemas import (
+    MAX_LEARNING_REFERENCES,
     LearningAnalysisResult,
     LearningReferenceAnalysisResult,
     LearningSession,
-    MAX_LEARNING_REFERENCES,
 )
 
 

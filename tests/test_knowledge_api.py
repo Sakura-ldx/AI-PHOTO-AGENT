@@ -1,13 +1,18 @@
 from __future__ import annotations
 
+import json
+from datetime import UTC, datetime
 from io import BytesIO
 
 from fastapi.testclient import TestClient
 from PIL import Image
 
 from app.adapters.analysis import MockAnalysisProvider
+from app.errors import StorageOperationError
 from app.main import create_app
+from app.services import workflows as workflows_module
 from app.services.storage import FileStorage
+from app.services.workflows import PhotoWorkflow
 
 
 def make_image_upload() -> tuple[str, bytes, str]:
@@ -212,6 +217,25 @@ def test_rebuild_and_reanalysis_keep_one_summary_per_photo(tmp_path):
     assert len(listing["items"]) == 1
 
 
+def test_rebuild_reuses_measurements_across_directions(tmp_path, monkeypatch):
+    client, _storage = make_client(tmp_path)
+    photo_id = upload_and_analyze(client)
+    calls: list[object] = []
+    original = workflows_module.measure_file
+
+    def counting_measure(path):
+        calls.append(path)
+        return original(path)
+
+    monkeypatch.setattr(workflows_module, "measure_file", counting_measure)
+
+    rebuild = client.post(f"/api/knowledge/summaries/{photo_id}/rebuild")
+
+    assert rebuild.status_code == 200
+    assert len(rebuild.json()["directions"]) == 3
+    assert len(calls) == 1
+
+
 def test_corrupt_summary_record_returns_server_error(tmp_path):
     client, storage = make_client(tmp_path)
     upload_and_analyze(client)
@@ -223,6 +247,197 @@ def test_corrupt_summary_record_returns_server_error(tmp_path):
     assert "detail" in response.json()
     assert "broken" not in response.json()["detail"].lower()
 
+
+def test_tampered_summary_url_fails_closed(tmp_path):
+    client, storage = make_client(tmp_path)
+    photo_id = upload_and_analyze(client)
+    path = storage.knowledge_summary_path(photo_id)
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    payload["image"]["display_url"] = "javascript:alert(1)"
+    path.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+
+    response = client.get("/api/knowledge/summaries")
+
+    assert response.status_code == 500
+    assert "javascript" not in response.text.lower()
+
+
+def test_naive_summary_timestamp_is_normalized_to_utc(tmp_path):
+    client, storage = make_client(tmp_path)
+    photo_id = upload_and_analyze(client)
+    path = storage.knowledge_summary_path(photo_id)
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    payload["generated_at"] = "2026-01-02T03:04:05"
+    path.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+
+    response = client.get("/api/knowledge/summaries")
+
+    assert response.status_code == 200
+    generated_at = response.json()["items"][0]["generated_at"]
+    parsed = datetime.fromisoformat(generated_at)
+    assert parsed.tzinfo is not None
+    assert parsed.utcoffset() == UTC.utcoffset(parsed)
+
+
+def test_failed_rebuild_keeps_previous_summary_and_previews(tmp_path, monkeypatch):
+    client, storage = make_client(tmp_path)
+    photo_id = upload_and_analyze(client)
+    previous = client.get(f"/api/knowledge/summaries/{photo_id}").json()
+    preview_urls = [
+        direction["preview_url"]
+        for direction in previous["directions"]
+        if direction["preview_url"]
+    ]
+    assert len(preview_urls) == 3
+
+    def fail_direction(*_args, **_kwargs):
+        raise StorageOperationError("simulated render failure")
+
+    monkeypatch.setattr(
+        PhotoWorkflow,
+        "_build_learning_direction",
+        fail_direction,
+    )
+
+    failed = client.post(f"/api/knowledge/summaries/{photo_id}/rebuild")
+    assert failed.status_code == 500
+
+    unchanged = client.get(f"/api/knowledge/summaries/{photo_id}")
+    assert unchanged.status_code == 200
+    assert unchanged.json()["generated_at"] == previous["generated_at"]
+    for preview_url in preview_urls:
+        assert client.get(preview_url).status_code == 200
+
+    monkeypatch.undo()
+    rebuilt = client.post(f"/api/knowledge/summaries/{photo_id}/rebuild")
+    assert rebuilt.status_code == 200
+    preview_dir = storage.summary_previews_dir / photo_id
+    assert len(list(preview_dir.glob("*.jpg"))) == 3
+
+
+
+def test_knowledge_list_exposes_style_tags_and_style_filter(tmp_path):
+    client, _storage = make_client(tmp_path)
+    photo_id = upload_and_analyze(client)
+
+    listing = client.get("/api/knowledge/summaries").json()
+    item = listing["items"][0]
+    style_tags = listing["style_tags"]
+    assert style_tags, "style tags must aggregate the summary style names"
+    assert {entry["name"] for entry in style_tags} == set(item["style_names"])
+    for entry in style_tags:
+        assert entry["count"] == 1
+
+    overview = client.get("/api/knowledge/overview").json()
+    assert {entry["name"] for entry in overview["style_tags"]} == set(
+        item["style_names"]
+    )
+
+    style = item["style_names"][0]
+    filtered = client.get("/api/knowledge/summaries", params={"style": style})
+    assert filtered.status_code == 200
+    assert filtered.json()["total"] == 1
+    assert filtered.json()["items"][0]["photo_id"] == photo_id
+
+    missing_style = client.get(
+        "/api/knowledge/summaries",
+        params={"style": "不存在的风格"},
+    )
+    assert missing_style.status_code == 200
+    assert missing_style.json()["total"] == 0
+    assert missing_style.json()["items"] == []
+
+
+def test_knowledge_search_matches_tags_styles_and_filenames(tmp_path):
+    client, _storage = make_client(tmp_path)
+    photo_id = upload_and_analyze(client)
+    listing = client.get("/api/knowledge/summaries").json()
+    item = listing["items"][0]
+
+    category = item["primary_category"]
+    by_category = client.get("/api/knowledge/summaries", params={"q": category})
+    assert by_category.status_code == 200
+    assert by_category.json()["total"] == 1
+    assert by_category.json()["items"][0]["photo_id"] == photo_id
+
+    by_filename = client.get("/api/knowledge/summaries", params={"q": "sample.jpg"})
+    assert by_filename.status_code == 200
+    assert by_filename.json()["total"] == 1
+
+    tag_label = item["tags"][0]["label"]
+    by_tag = client.get("/api/knowledge/summaries", params={"q": tag_label})
+    assert by_tag.json()["total"] == 1
+
+    # Multiple tokens are combined with AND semantics.
+    two_tokens = f"{tag_label} {item['style_names'][0]}"
+    by_tokens = client.get("/api/knowledge/summaries", params={"q": two_tokens})
+    assert by_tokens.json()["total"] == 1
+    no_match = client.get(
+        "/api/knowledge/summaries",
+        params={"q": f"{tag_label} 完全不存在"},
+    )
+    assert no_match.status_code == 200
+    assert no_match.json()["total"] == 0
+    assert no_match.json()["items"] == []
+
+
+def test_knowledge_search_supports_approximate_typos(tmp_path):
+    client, _storage = make_client(tmp_path)
+    photo_id = upload_and_analyze(client)
+    listing = client.get("/api/knowledge/summaries").json()
+    item = listing["items"][0]
+
+    tag_label = next(
+        tag["label"] for tag in item["tags"] if len(tag["label"]) >= 3
+    )
+    typo = tag_label[:-1] + ("乙" if tag_label[-1] != "乙" else "丙")
+    response = client.get("/api/knowledge/summaries", params={"q": typo})
+    assert response.status_code == 200
+    found_ids = {entry["photo_id"] for entry in response.json()["items"]}
+    assert photo_id in found_ids, (
+        f"approximate search for {typo!r} should still find {tag_label!r}"
+    )
+
+
+def test_knowledge_search_ignores_single_character_fragments(tmp_path):
+    client, _storage = make_client(tmp_path)
+    upload_and_analyze(client)
+    listing = client.get("/api/knowledge/summaries").json()
+    tag_label = listing["items"][0]["tags"][0]["label"]
+
+    # 单字片段不应把无关查询也拖进来；两字查询差一个字也不该命中所有记录。
+    fragment = tag_label[0] + ("乙" if tag_label[0] != "乙" else "丙")
+    response = client.get("/api/knowledge/summaries", params={"q": fragment})
+    assert response.status_code == 200
+    assert response.json()["total"] == 0
+    assert response.json()["items"] == []
+
+
+def test_knowledge_search_combines_with_directory_filters(tmp_path):
+    client, _storage = make_client(tmp_path)
+    photo_id = upload_and_analyze(client)
+    listing = client.get("/api/knowledge/summaries").json()
+    item = listing["items"][0]
+    tag = item["tags"][0]
+
+    combined = client.get(
+        "/api/knowledge/summaries",
+        params={
+            "q": item["primary_category"],
+            "dimension": tag["dimension"],
+            "tag": tag["label"],
+            "style": item["style_names"][0],
+        },
+    )
+    assert combined.status_code == 200
+    assert combined.json()["total"] == 1
+    assert combined.json()["items"][0]["photo_id"] == photo_id
+
+    contradiction = client.get(
+        "/api/knowledge/summaries",
+        params={"q": "完全不存在", "style": item["style_names"][0]},
+    )
+    assert contradiction.json()["total"] == 0
 
 
 def test_summary_detail_is_not_found_for_unknown_photo(tmp_path):
@@ -248,3 +463,46 @@ def test_preview_response_exposes_adaptive_strength_details(tmp_path):
     assert isinstance(body["warnings"], list)
     assert isinstance(body["baseline_notes"], list)
     assert body["strength"] is not None
+
+
+def test_manual_preview_and_export_are_recorded_in_summary_detail(tmp_path):
+    client, storage = make_client(tmp_path)
+    photo_id = upload_and_analyze(client)
+    detail = client.get(f"/api/knowledge/summaries/{photo_id}").json()
+    assert detail["manual_edit"] is None
+    styles = [direction["style_id"] for direction in detail["directions"]]
+
+    preview = client.post(
+        f"/api/photos/{photo_id}/preview",
+        json={"style_id": styles[0], "intensity": 0.65},
+    )
+    assert preview.status_code == 200
+    preview_body = preview.json()
+
+    detail = client.get(f"/api/knowledge/summaries/{photo_id}").json()
+    manual = detail["manual_edit"]
+    assert manual is not None
+    assert manual["style_id"] == styles[0]
+    assert manual["style_name"] == detail["directions"][0]["style_name"]
+    assert manual["intensity"] == 0.65
+    assert manual["source"] == "preview"
+    assert manual["parameters_summary"]
+    assert manual["preview_url"] == preview_body["preview_url"]
+    assert client.get(manual["preview_url"]).status_code == 200
+
+    export = client.post(
+        f"/api/photos/{photo_id}/export",
+        json={"style_id": styles[1], "intensity": 0.4},
+    )
+    assert export.status_code == 200
+
+    detail = client.get(f"/api/knowledge/summaries/{photo_id}").json()
+    manual = detail["manual_edit"]
+    assert manual["style_id"] == styles[1]
+    assert manual["intensity"] == 0.4
+    assert manual["source"] == "export"
+    assert storage.load_session(photo_id).manual_edit is not None
+
+    rebuilt = client.post(f"/api/knowledge/summaries/{photo_id}/rebuild")
+    assert rebuilt.status_code == 200
+    assert rebuilt.json()["manual_edit"]["style_id"] == styles[1]

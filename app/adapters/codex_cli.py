@@ -18,7 +18,6 @@ from app.adapters.model_image import prepare_model_image
 from app.adapters.vision_models import strict_output_schema
 from app.errors import ProviderOutputError, ProviderServiceError, ProviderTimeoutError
 
-
 LOGGER = logging.getLogger(__name__)
 _EXECUTABLE_CACHE_LOCK = threading.Lock()
 StructuredOutput = TypeVar("StructuredOutput", bound=BaseModel)
@@ -154,7 +153,12 @@ class CodexCliStructuredClient:
                     raise ProviderOutputError(
                         f"Codex CLI {operation} returned no result file."
                     )
-                raw_result = result_path.read_text(encoding="utf-8")
+                try:
+                    raw_result = result_path.read_text(encoding="utf-8")
+                except UnicodeError as exc:
+                    raise ProviderOutputError(
+                        f"Codex CLI {operation} returned a non-UTF-8 result file."
+                    ) from exc
         except subprocess.TimeoutExpired as exc:
             elapsed_ms = round((perf_counter() - started_at) * 1000)
             LOGGER.warning(

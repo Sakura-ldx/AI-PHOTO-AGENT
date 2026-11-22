@@ -349,7 +349,7 @@
         font-weight: 700;
       }
 
-      /* Section 7: 学习总结与知识库 */
+      /* Section 7: 学习总结与知识库（目录树 + 图片墙 + 笔记弹层） */
       #knowledgeSection {
         scroll-margin-top: 16px;
       }
@@ -372,70 +372,6 @@
         font-variant-numeric: tabular-nums;
       }
 
-      .knowledge-filters {
-        display: grid;
-        gap: 8px;
-        margin: 12px 0 16px;
-        padding: 12px;
-        border: 1px solid var(--line);
-        border-radius: 8px;
-        background: #fbfcf9;
-      }
-
-      .knowledge-facet-rows {
-        display: grid;
-        gap: 8px;
-      }
-
-      .filter-row {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 8px;
-        align-items: center;
-      }
-
-      .filter-label {
-        min-width: 56px;
-        color: var(--muted);
-        font-size: 13px;
-        font-weight: 600;
-      }
-
-      .chip-row {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 6px;
-        align-items: center;
-      }
-
-      .chip {
-        min-height: 0;
-        padding: 3px 10px;
-        border: 1px solid var(--line);
-        border-radius: 999px;
-        background: #fff;
-        color: var(--ink);
-        font-size: 13px;
-        font-weight: 500;
-      }
-
-      .chip:hover {
-        background: rgba(15, 123, 104, 0.08);
-        color: var(--accent-dark);
-      }
-
-      .chip.selected {
-        border-color: var(--accent);
-        background: var(--accent);
-        color: #fff;
-      }
-
-      .chip-count {
-        margin-left: 3px;
-        font-size: 12px;
-        opacity: 0.72;
-      }
-
       button.secondary {
         border: 1px solid var(--line);
         background: #fff;
@@ -446,160 +382,267 @@
         background: rgba(15, 123, 104, 0.08);
       }
 
-      .knowledge-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-        gap: 16px;
-        align-items: start;
+      .knowledge-toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        align-items: center;
+        margin-top: 12px;
       }
 
-      .knowledge-grid[hidden],
-      .knowledge-filters[hidden],
-      .filter-row[hidden] {
+      .knowledge-search {
+        display: flex;
+        flex: 1 1 320px;
+        gap: 8px;
+        min-width: 240px;
+      }
+
+      .knowledge-search input {
+        flex: 1 1 auto;
+        width: 100%;
+        min-height: 38px;
+        padding: 0 14px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: #fff;
+        color: var(--ink);
+        font: inherit;
+      }
+
+      .knowledge-search input:focus-visible {
+        outline: 2px solid rgba(15, 123, 104, 0.35);
+        outline-offset: 1px;
+      }
+
+      .knowledge-search-clear {
+        flex: 0 0 auto;
+        min-height: 38px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: #fff;
+        color: var(--muted);
+      }
+
+      .knowledge-search-clear:hover {
+        background: rgba(15, 123, 104, 0.08);
+        color: var(--accent-dark);
+      }
+
+      .knowledge-search-summary {
+        margin: 10px 0 0;
+      }
+
+      .knowledge-search-summary[hidden] {
         display: none;
       }
 
-      .knowledge-card {
-        display: flex;
-        flex-direction: column;
-        overflow: hidden;
-        border: 1px solid var(--line);
-        border-radius: 8px;
-        background: var(--panel);
-      }
-
-      .knowledge-card-media {
-        position: relative;
-        background: #eef1ec;
-      }
-
-      .knowledge-thumbnail {
-        display: block;
-        width: 100%;
-        height: 200px;
-        object-fit: cover;
-        cursor: zoom-in;
-      }
-
-      .knowledge-thumbnail-placeholder {
+      .knowledge-layout {
         display: grid;
-        place-items: center;
-        min-height: 140px;
-        color: var(--muted);
-        font-size: 14px;
+        grid-template-columns: 240px minmax(0, 1fr);
+        gap: 16px;
+        align-items: start;
+        margin-top: 14px;
       }
 
-      .knowledge-category-badge {
-        position: absolute;
-        top: 8px;
-        left: 8px;
-        background: rgba(255, 255, 255, 0.92);
-      }
-
-      .knowledge-card-body {
-        display: grid;
-        gap: 8px;
-        padding: 12px;
-      }
-
-      .knowledge-card-body p {
-        margin: 0;
-      }
-
-      .knowledge-summary {
-        color: var(--ink);
-      }
-
-      .knowledge-tags {
-        gap: 4px;
-      }
-
-      .knowledge-tag.measurement {
-        color: var(--warn);
-        background: rgba(155, 77, 25, 0.12);
-      }
-
-      .knowledge-directions-title {
-        margin: 4px 0 0;
-        font-size: 15px;
-      }
-
-      .knowledge-directions {
-        display: grid;
-        gap: 10px;
-      }
-
-      .knowledge-direction-preview-list {
+      .knowledge-tree {
+        position: sticky;
+        top: 16px;
         display: grid;
         gap: 4px;
-      }
-
-      .knowledge-direction-preview-row {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 8px;
-        align-items: center;
-        justify-content: space-between;
-        font-size: 14px;
-      }
-
-      .knowledge-direction {
-        display: grid;
-        gap: 6px;
+        align-content: start;
+        max-height: calc(100vh - 32px);
+        overflow: auto;
         padding: 10px;
         border: 1px solid var(--line);
-        border-radius: 6px;
+        border-radius: 10px;
         background: #fbfcf9;
       }
 
-      .knowledge-direction p {
-        margin: 0;
-        color: var(--muted);
-      }
-
-      .knowledge-direction p strong {
-        color: var(--ink);
-      }
-
-      .knowledge-direction-head {
+      .knowledge-tree-all {
         display: flex;
-        flex-wrap: wrap;
-        gap: 8px;
         align-items: center;
-      }
-
-      .knowledge-direction-head h4 {
-        margin: 0;
-        font-size: 15px;
-      }
-
-      .knowledge-warnings {
-        display: grid;
-        gap: 4px;
-        margin: 0;
-        padding-left: 18px;
-        font-size: 14px;
-      }
-
-      .knowledge-direction-preview {
-        margin: 0;
-        overflow: hidden;
+        justify-content: space-between;
+        gap: 8px;
+        width: 100%;
+        min-height: 34px;
+        padding: 6px 10px;
         border: 1px solid var(--line);
         border-radius: 6px;
-        background: #eef1ec;
+        background: #fff;
+        color: var(--ink);
+        font-weight: 650;
+        text-align: left;
       }
 
-      .knowledge-direction-preview img {
+      .knowledge-tree-all:hover {
+        background: rgba(15, 123, 104, 0.08);
+        color: var(--accent-dark);
+      }
+
+      .knowledge-tree-all.selected {
+        border-color: var(--accent);
+        background: var(--accent);
+        color: #fff;
+      }
+
+      .knowledge-tree-group {
+        display: grid;
+        gap: 2px;
+      }
+
+      .knowledge-tree-group-toggle {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        width: 100%;
+        min-height: 30px;
+        padding: 4px 6px;
+        border: 0;
+        border-radius: 6px;
+        background: transparent;
+        color: var(--muted);
+        font-size: 13px;
+        font-weight: 700;
+        text-align: left;
+      }
+
+      .knowledge-tree-group-toggle:hover {
+        background: rgba(15, 123, 104, 0.08);
+        color: var(--accent-dark);
+      }
+
+      .knowledge-tree-caret {
+        display: inline-block;
+        width: 12px;
+        font-size: 11px;
+        transition: transform 0.15s ease;
+      }
+
+      .knowledge-tree-group.collapsed .knowledge-tree-caret {
+        transform: rotate(-90deg);
+      }
+
+      .knowledge-tree-group.collapsed .knowledge-tree-items {
+        display: none;
+      }
+
+      .knowledge-tree-items {
+        display: grid;
+        gap: 2px;
+        padding-left: 10px;
+      }
+
+      .knowledge-tree-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        width: 100%;
+        min-height: 30px;
+        padding: 4px 8px;
+        border: 0;
+        border-radius: 6px;
+        background: transparent;
+        color: var(--ink);
+        font-size: 13px;
+        font-weight: 500;
+        text-align: left;
+      }
+
+      .knowledge-tree-item:hover {
+        background: rgba(15, 123, 104, 0.08);
+        color: var(--accent-dark);
+      }
+
+      .knowledge-tree-item.selected {
+        background: var(--accent);
+        color: #fff;
+        font-weight: 650;
+      }
+
+      .knowledge-tree-label {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .knowledge-tree-count {
+        flex: 0 0 auto;
+        min-width: 22px;
+        padding: 0 6px;
+        border-radius: 999px;
+        background: rgba(15, 123, 104, 0.1);
+        color: var(--accent-dark);
+        font-size: 11px;
+        font-variant-numeric: tabular-nums;
+        text-align: center;
+      }
+
+      .knowledge-tree-item.selected .knowledge-tree-count {
+        background: rgba(255, 255, 255, 0.22);
+        color: #fff;
+      }
+
+      .knowledge-gallery {
+        display: grid;
+        gap: 12px;
+        align-content: start;
+      }
+
+      .knowledge-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+        gap: 10px;
+      }
+
+      .knowledge-grid[hidden],
+      .knowledge-empty[hidden],
+      .knowledge-load-more[hidden] {
+        display: none;
+      }
+
+      .knowledge-tile {
         display: block;
         width: 100%;
-        height: auto;
+        min-height: 0;
+        padding: 0;
+        overflow: hidden;
+        border: 0;
+        border-radius: 10px;
+        background: #eef1ec;
         cursor: zoom-in;
+        aspect-ratio: 3 / 4;
       }
 
-      .knowledge-direction-preview figcaption {
-        padding: 6px 8px;
-        border-top: 1px solid var(--line);
-        background: #fff;
+      .knowledge-tile img {
+        display: block;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transition: transform 0.25s ease;
+      }
+
+      .knowledge-tile:hover img {
+        transform: scale(1.03);
+      }
+
+      .knowledge-tile:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+      }
+
+      .knowledge-tile-placeholder {
+        display: grid;
+        place-items: center;
+        width: 100%;
+        height: 100%;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .knowledge-load-more {
+        justify-self: center;
+        min-width: 160px;
       }
 
       .knowledge-empty {
@@ -610,19 +653,373 @@
       }
 
       .knowledge-empty .meta-line {
-        margin: 0 auto;
         max-width: 720px;
+        margin: 0 auto;
       }
 
-      @media (max-width: 640px) {
-        .knowledge-grid {
+      /* 小红书笔记式详情弹层 */
+      body.knowledge-note-open {
+        overflow: hidden;
+      }
+
+      .knowledge-note {
+        position: fixed;
+        inset: 0;
+        z-index: 60;
+        display: grid;
+        place-items: center;
+        padding: 16px;
+      }
+
+      .knowledge-note[hidden] {
+        display: none;
+      }
+
+      .knowledge-note-backdrop {
+        position: absolute;
+        inset: 0;
+        background: rgba(17, 22, 19, 0.62);
+      }
+
+      .knowledge-note-card {
+        position: relative;
+        display: grid;
+        grid-template-columns: minmax(0, 1.15fr) minmax(300px, 0.85fr);
+        width: min(1080px, 100%);
+        max-height: calc(100vh - 32px);
+        overflow: hidden;
+        border-radius: 14px;
+        background: #fff;
+        box-shadow: 0 24px 64px rgba(0, 0, 0, 0.35);
+      }
+
+      .knowledge-note-close {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        z-index: 2;
+        width: 36px;
+        height: 36px;
+        min-height: 0;
+        padding: 0;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.92);
+        color: var(--ink);
+        font-size: 20px;
+        line-height: 1;
+      }
+
+      .knowledge-note-close:hover {
+        background: #fff;
+        color: var(--ink);
+      }
+
+      .knowledge-note-media {
+        position: relative;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+        align-content: center;
+        min-height: 320px;
+        padding: 18px;
+        background: #101512;
+      }
+
+      .knowledge-note-figure {
+        display: grid;
+        gap: 6px;
+        justify-items: center;
+        align-content: center;
+        min-width: 0;
+        margin: 0;
+      }
+
+      .knowledge-note-figure figcaption {
+        padding: 2px 10px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.14);
+        color: #fff;
+        font-size: 12px;
+        letter-spacing: 0.02em;
+      }
+
+      .knowledge-note-media img {
+        display: block;
+        width: 100%;
+        max-width: 100%;
+        max-height: calc(100vh - 110px);
+        border-radius: 4px;
+        object-fit: contain;
+      }
+
+      .knowledge-note-media img[hidden] {
+        display: none;
+      }
+
+      .knowledge-note-media-hint {
+        position: absolute;
+        right: 12px;
+        bottom: 12px;
+        left: 12px;
+        padding: 6px 10px;
+        border-radius: 999px;
+        background: rgba(0, 0, 0, 0.55);
+        color: #fff;
+        font-size: 12px;
+        text-align: center;
+      }
+
+      .knowledge-note-media-hint[hidden],
+      .knowledge-note-loading[hidden] {
+        display: none;
+      }
+
+      .knowledge-note-loading {
+        position: absolute;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        color: #dfe6e1;
+        font-size: 14px;
+      }
+
+      .knowledge-note-body {
+        display: grid;
+        gap: 12px;
+        align-content: start;
+        padding: 22px 22px 26px;
+        overflow: auto;
+      }
+
+      .knowledge-note-body h3 {
+        margin: 4px 0 0;
+        font-size: 16px;
+      }
+
+      .knowledge-note-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+        padding-right: 40px;
+      }
+
+      .knowledge-note-summary {
+        margin: 0;
+        color: var(--ink);
+      }
+
+      .knowledge-note-tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+
+      .knowledge-note-tags[hidden],
+      .knowledge-note-content[hidden],
+      .knowledge-note-error[hidden],
+      .knowledge-note-loading-card[hidden] {
+        display: none;
+      }
+
+      .knowledge-note-loading-card {
+        display: grid;
+        gap: 10px;
+      }
+
+      .knowledge-note-skeleton {
+        height: 16px;
+        border-radius: 999px;
+        background: linear-gradient(90deg, #eef1ec 25%, #f7f9f5 50%, #eef1ec 75%);
+        background-size: 200% 100%;
+        animation: knowledge-skeleton 1.1s ease-in-out infinite;
+      }
+
+      .knowledge-note-skeleton.wide {
+        height: 44px;
+        border-radius: 8px;
+      }
+
+      @keyframes knowledge-skeleton {
+        from {
+          background-position: 200% 0;
+        }
+        to {
+          background-position: -200% 0;
+        }
+      }
+
+      .knowledge-note-error {
+        display: grid;
+        gap: 10px;
+        padding: 14px;
+        border: 1px dashed var(--line);
+        border-radius: 8px;
+      }
+
+      .knowledge-note-directions {
+        display: grid;
+        gap: 10px;
+      }
+
+      .knowledge-note-direction {
+        display: grid;
+        gap: 6px;
+        min-height: 0;
+        padding: 12px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #fbfcf9;
+        color: var(--ink);
+        font: inherit;
+        text-align: left;
+        cursor: pointer;
+      }
+
+      .knowledge-note-direction:hover {
+        border-color: var(--accent);
+      }
+
+      .knowledge-note-direction.selected {
+        border-color: var(--accent);
+        background: rgba(15, 123, 104, 0.08);
+        box-shadow: 0 0 0 1px rgba(15, 123, 104, 0.25);
+      }
+
+      .knowledge-note-direction-head {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+        font-weight: 400;
+      }
+
+      .knowledge-note-direction-name {
+        font-weight: 700;
+      }
+
+      .knowledge-note-reason,
+      .knowledge-note-params {
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      .knowledge-note-reason strong,
+      .knowledge-note-params strong {
+        color: var(--ink);
+      }
+
+      .knowledge-note-warnings {
+        display: grid;
+        gap: 3px;
+        font-size: 13px;
+      }
+
+      .knowledge-note-warning {
+        display: block;
+      }
+
+      .knowledge-note-manual {
+        display: grid;
+        gap: 8px;
+        padding: 12px;
+        border: 1px solid rgba(15, 123, 104, 0.45);
+        border-radius: 8px;
+        background: rgba(15, 123, 104, 0.07);
+      }
+
+      .knowledge-note-manual[hidden] {
+        display: none;
+      }
+
+      .knowledge-note-manual h3 {
+        margin: 0;
+        font-size: 15px;
+        color: var(--accent);
+      }
+
+      .knowledge-note-manual-body {
+        display: grid;
+        gap: 6px;
+      }
+
+      .knowledge-note-manual-head {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+      }
+
+      .knowledge-note-manual-name {
+        font-weight: 700;
+      }
+
+      .knowledge-note-manual-preview {
+        justify-self: start;
+        width: 76px;
+        padding: 0;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        background: #fff;
+        cursor: pointer;
+        overflow: hidden;
+      }
+
+      .knowledge-note-manual-preview img {
+        display: block;
+        width: 100%;
+        height: 100px;
+        object-fit: cover;
+      }
+
+      @media (max-width: 900px) {
+        .knowledge-layout {
           grid-template-columns: 1fr;
         }
 
-        .knowledge-thumbnail {
-          height: 180px;
+        .knowledge-tree {
+          position: static;
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+          max-height: none;
         }
 
+        .knowledge-tree-all {
+          width: auto;
+        }
+
+        .knowledge-tree-group {
+          flex: 1 1 190px;
+        }
+      }
+
+      @media (max-width: 820px) {
+        .knowledge-note-card {
+          grid-template-columns: 1fr;
+          max-height: calc(100vh - 24px);
+          overflow: auto;
+        }
+
+        .knowledge-note-media {
+          min-height: 220px;
+          max-height: none;
+        }
+
+        .knowledge-note-media img {
+          max-height: 38vh;
+        }
+
+        .knowledge-note-body {
+          padding: 18px;
+        }
+
+        .knowledge-grid {
+          grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+        }
+      }
+
+      @media (max-width: 640px) {
         .view-switch {
           width: 100%;
         }
@@ -630,7 +1027,12 @@
         .view-switch-btn {
           flex: 1 1 150px;
         }
+
+        .knowledge-grid {
+          grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+        }
       }
+
     </style>
   </head>
   <body>
@@ -650,7 +1052,7 @@
           </button>
           <button id="knowledgeViewBtn" class="view-switch-btn" type="button" aria-pressed="false">
             <span class="view-switch-title">知识库</span>
-            <span class="view-switch-note">学习总结 · 分类筛选</span>
+            <span class="view-switch-note">目录 · 图片笔记 · 近似搜索</span>
           </button>
         </nav>
       </div>
@@ -683,6 +1085,7 @@
             也可以改选其他风格。
           </p>
           <p id="summary"></p>
+          <p id="analysisSeries" class="meta-line" hidden></p>
           <p id="analysisKnowledgeHint" class="meta-line knowledge-hint" hidden>
             本次修图已生成学习总结：<a href="#knowledgeSection">前往知识库查看 →</a>
           </p>
@@ -776,8 +1179,9 @@
         <section id="knowledgeSection">
           <h2>学习总结与知识库</h2>
           <p class="meta-line">
-            每次完成图片诊断后，服务端会整理分析结论、标签和 3 个修图方向并生成学习总结；
-            这里汇总最近的分析记录，可按主分类或标签筛选，也可以为当前照片重新生成总结。
+            每次完成图片诊断后，服务端会整理分析结论、标签和 3 个修图方向并生成学习总结。
+            左侧按标签目录浏览修完的图片，点击图片会以小红书笔记形式打开详情；
+            搜索支持按标签、风格、场景和文件名近似匹配，也可以为当前照片重新生成总结。
             点击顶部「修图」可返回修图工作台。
           </p>
           <div class="actions">
@@ -786,25 +1190,87 @@
             <span id="knowledgeStatus" class="status" aria-live="polite"></span>
           </div>
           <p id="knowledgeStats" class="meta-line knowledge-stats" hidden></p>
-          <div id="knowledgeFilters" class="knowledge-filters" hidden>
-            <div id="knowledgeCategoryFilterRow" class="filter-row" hidden>
-              <span class="filter-label">主分类</span>
-              <div id="knowledgeCategoryChips" class="chip-row"></div>
-            </div>
-            <div id="knowledgeFacetRows" class="knowledge-facet-rows"></div>
-            <div class="filter-row">
-              <button id="clearKnowledgeFiltersBtn" class="secondary" hidden>清除筛选</button>
-              <span id="knowledgeActiveFilter" class="meta-line"></span>
+          <div class="knowledge-toolbar">
+            <div class="knowledge-search" role="search">
+              <input
+                id="knowledgeSearchInput"
+                type="search"
+                placeholder="搜索标签、风格或场景（支持近似匹配）"
+                autocomplete="off"
+                aria-label="搜索知识库"
+              />
+              <button id="knowledgeSearchClearBtn" class="knowledge-search-clear" type="button" hidden>清空</button>
             </div>
           </div>
-          <div id="knowledgeGrid" class="knowledge-grid"></div>
-          <div id="knowledgeEmpty" class="knowledge-empty" hidden>
-            <h3 id="knowledgeEmptyTitle">还没有学习总结</h3>
-            <p id="knowledgeEmptyBody" class="meta-line"></p>
+          <p id="knowledgeSearchSummary" class="meta-line knowledge-search-summary" hidden></p>
+          <div class="knowledge-layout">
+            <aside id="knowledgeTree" class="knowledge-tree" aria-label="知识库目录">
+              <button id="knowledgeAllPhotosBtn" class="knowledge-tree-all selected" type="button">
+                <span class="knowledge-tree-label">全部照片</span>
+                <span id="knowledgeAllPhotosCount" class="knowledge-tree-count">0</span>
+              </button>
+              <div id="knowledgeTreeGroups"></div>
+            </aside>
+            <div class="knowledge-gallery">
+              <div id="knowledgeGrid" class="knowledge-grid" hidden></div>
+              <button id="knowledgeLoadMoreBtn" class="secondary knowledge-load-more" type="button" hidden>加载更多</button>
+              <div id="knowledgeEmpty" class="knowledge-empty" hidden>
+                <h3 id="knowledgeEmptyTitle">还没有学习总结</h3>
+                <p id="knowledgeEmptyBody" class="meta-line"></p>
+              </div>
+            </div>
           </div>
         </section>
       </div>
     </main>
+
+    <div id="knowledgeNote" class="knowledge-note" hidden>
+      <div id="knowledgeNoteBackdrop" class="knowledge-note-backdrop"></div>
+      <div id="knowledgeNoteCard" class="knowledge-note-card" role="dialog" aria-modal="true" aria-labelledby="knowledgeNoteSummary">
+        <button id="knowledgeNoteCloseBtn" class="knowledge-note-close" type="button" aria-label="关闭详情">×</button>
+        <div class="knowledge-note-media">
+          <figure class="knowledge-note-figure">
+            <figcaption>原图</figcaption>
+            <img id="knowledgeNoteOriginalImage" alt="原图" hidden />
+          </figure>
+          <figure class="knowledge-note-figure">
+            <figcaption>修图</figcaption>
+            <img id="knowledgeNoteImage" alt="修图方向预览" hidden />
+          </figure>
+          <div id="knowledgeNoteLoading" class="knowledge-note-loading">正在加载...</div>
+          <p id="knowledgeNoteMediaHint" class="knowledge-note-media-hint" hidden></p>
+        </div>
+        <div id="knowledgeNoteBody" class="knowledge-note-body">
+          <div id="knowledgeNoteLoadingCard" class="knowledge-note-loading-card">
+            <div class="knowledge-note-skeleton wide"></div>
+            <div class="knowledge-note-skeleton"></div>
+            <div class="knowledge-note-skeleton"></div>
+            <div class="knowledge-note-skeleton wide"></div>
+            <div class="knowledge-note-skeleton"></div>
+          </div>
+          <div id="knowledgeNoteContent" class="knowledge-note-content" hidden>
+            <div id="knowledgeNoteMeta" class="knowledge-note-meta">
+              <span id="knowledgeNoteCategory" class="pill"></span>
+              <span id="knowledgeNoteTime" class="meta-line"></span>
+            </div>
+            <div id="knowledgeNoteTags" class="knowledge-note-tags"></div>
+            <p id="knowledgeNoteSummary" class="knowledge-note-summary"></p>
+            <div id="knowledgeNoteManual" class="knowledge-note-manual" hidden>
+              <h3>你选择过的修图方向</h3>
+              <div id="knowledgeNoteManualBody" class="knowledge-note-manual-body"></div>
+            </div>
+            <h3>3 个修图方向</h3>
+            <div id="knowledgeNoteDirections" class="knowledge-note-directions"></div>
+          </div>
+          <div id="knowledgeNoteError" class="knowledge-note-error" hidden>
+            <p id="knowledgeNoteErrorText" class="meta-line warning"></p>
+            <div class="actions">
+              <button id="knowledgeNoteRetryBtn" class="secondary" type="button">重试加载</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <script>
       const KNOWLEDGE_PAGE_SIZE = 50;
@@ -817,7 +1283,21 @@
         tone: "影调",
         composition: "构图",
         issue: "待改善",
+        portrait: "人像风格",
+        environment: "环境背景",
       };
+      const KNOWLEDGE_TREE_DIMENSION_ORDER = [
+        "composition",
+        "portrait",
+        "environment",
+        "subject",
+        "light",
+        "color",
+        "tone",
+        "issue",
+      ];
+      const KNOWLEDGE_SEARCH_DEBOUNCE_MS = 300;
+
       // Local endpoints may legitimately be slow, but the UI must never wait
       // forever on a dead or hung service.
       const REQUEST_TIMEOUT_MS = 600000;
@@ -837,7 +1317,9 @@
         developResult: null,
         knowledgeOverview: null,
         knowledgeList: null,
-        knowledgeFilter: { dimension: null, tag: null, category: null },
+        knowledgeFilter: { kind: "all", dimension: null, tag: null, style: null },
+        knowledgeSearch: { query: "", applied: "" },
+        knowledgeTreeCollapsed: {},
         knowledgeDetails: {},
       };
 
@@ -847,7 +1329,6 @@
       const lightroomStatusText = el("lightroomStatusText");
       const lightroomActionStatus = el("lightroomActionStatus");
       const knowledgeStatus = el("knowledgeStatus");
-      const knowledgeCardRefs = new Map();
 
       el("fileInput").addEventListener("change", uploadAndAnalyze);
       el("fileInput").addEventListener("click", () => {
@@ -865,11 +1346,22 @@
         void loadKnowledge();
       });
       el("rebuildKnowledgeBtn").addEventListener("click", rebuildKnowledgeSummary);
-      el("clearKnowledgeFiltersBtn").addEventListener("click", clearKnowledgeFilters);
+      el("knowledgeAllPhotosBtn").addEventListener("click", selectKnowledgeAllPhotos);
+      el("knowledgeLoadMoreBtn").addEventListener("click", () => {
+        void loadKnowledgeMore();
+      });
+      el("knowledgeSearchInput").addEventListener("input", handleKnowledgeSearchInput);
+      el("knowledgeSearchInput").addEventListener("keydown", handleKnowledgeSearchKeydown);
+      el("knowledgeSearchClearBtn").addEventListener("click", clearKnowledgeSearch);
+      el("knowledgeNoteCloseBtn").addEventListener("click", closeKnowledgeNote);
+      el("knowledgeNoteBackdrop").addEventListener("click", closeKnowledgeNote);
+      el("knowledgeNoteRetryBtn").addEventListener("click", retryKnowledgeNote);
       el("studioViewBtn").addEventListener("click", () => setActiveView("studio"));
       el("knowledgeViewBtn").addEventListener("click", () => setActiveView("knowledge"));
+      document.addEventListener("keydown", handleKnowledgeNoteKeydown);
       bindKnowledgeHint("analysisKnowledgeHint");
       bindKnowledgeHint("previewKnowledgeHint");
+
       el("intensity").addEventListener("input", () => {
         el("intensityLabel").textContent = `${Math.round(Number(el("intensity").value) * 100)}%`;
       });
@@ -947,6 +1439,8 @@
         el("stylesSection").hidden = true;
         el("previewSection").hidden = true;
         el("summary").textContent = "";
+        el("analysisSeries").textContent = "";
+        el("analysisSeries").hidden = true;
         fillList("technical", []);
         fillList("composition", []);
         fillList("colorTone", []);
@@ -980,6 +1474,9 @@
         el("stylesSection").hidden = false;
         el("previewSection").hidden = false;
         el("summary").textContent = analysis.overall_summary;
+        const seriesNote = analysis.series && analysis.series.note;
+        el("analysisSeries").textContent = seriesNote || "";
+        el("analysisSeries").hidden = !seriesNote;
         fillList("technical", analysis.technical_diagnosis);
         fillList("composition", analysis.composition_observations);
         fillList("colorTone", analysis.color_tone_observations);
@@ -1315,8 +1812,11 @@
 
       function updateKnowledgeRebuildButton() {
         const button = el("rebuildKnowledgeBtn");
-        button.hidden = !state.photoId;
-        if (!button.hidden) button.textContent = KNOWLEDGE_REBUILD_LABEL;
+        if (!button) return;
+        button.hidden = !state.photoId || state.uploading;
+        if (!button.disabled) {
+          button.textContent = KNOWLEDGE_REBUILD_LABEL;
+        }
       }
 
       function setKnowledgeHints(visible) {
@@ -1325,42 +1825,40 @@
       }
 
       function bindKnowledgeHint(id) {
-        el(id).addEventListener("click", (event) => {
-          const target = event.target;
-          if (!target || typeof target.closest !== "function" || !target.closest("a")) {
-            return;
-          }
+        const hint = el(id);
+        if (!hint) return;
+        hint.addEventListener("click", (event) => {
+          const target = event && event.target;
+          if (!target || typeof target.closest !== "function") return;
+          if (!target.closest("a")) return;
           event.preventDefault();
           setActiveView("knowledge");
         });
       }
 
-      function setViewButtonState(button, active) {
-        button.setAttribute("aria-pressed", active ? "true" : "false");
+      function setViewButtonState() {
+        const isKnowledge = el("knowledgeView").hidden === false;
+        el("studioViewBtn").setAttribute("aria-pressed", isKnowledge ? "false" : "true");
+        el("knowledgeViewBtn").setAttribute("aria-pressed", isKnowledge ? "true" : "false");
       }
 
-      // 修图工作台与知识库是两个顶层界面，用顶栏按钮互相切换；切换时保留
-      // 各自已有的状态，只在第一次进入知识库时懒加载数据。
       function setActiveView(view) {
-        const showKnowledge = view === "knowledge";
-        el("studioView").hidden = showKnowledge;
-        el("knowledgeView").hidden = !showKnowledge;
-        setViewButtonState(el("studioViewBtn"), !showKnowledge);
-        setViewButtonState(el("knowledgeViewBtn"), showKnowledge);
-        document.title = showKnowledge ? "AI Photo Agent · 知识库" : "AI Photo Agent";
-        if (showKnowledge) {
-          updateKnowledgeRebuildButton();
-          if (!state.knowledgeList && !knowledgeViewLoading) {
-            void loadKnowledge();
-          }
+        const isKnowledge = view === "knowledge";
+        el("studioView").hidden = isKnowledge;
+        el("knowledgeView").hidden = !isKnowledge;
+        document.title = isKnowledge ? "AI Photo Agent · 知识库" : "AI Photo Agent";
+        setViewButtonState();
+        updateKnowledgeRebuildButton();
+        if (!isKnowledge) {
+          closeKnowledgeNote();
         }
-        if (typeof window.scrollTo === "function") {
-          window.scrollTo(0, 0);
+        if (isKnowledge && !state.knowledgeList && !knowledgeViewLoading) {
+          void loadKnowledge();
         }
+        window.scrollTo(0, 0);
       }
 
       async function refreshKnowledgeAfterAnalysis(photoId) {
-        let available = false;
         try {
           const summary = await getJson(
             `/api/knowledge/summaries/${encodeURIComponent(photoId)}`,
@@ -1368,26 +1866,49 @@
           );
           if (state.photoId !== photoId) return;
           state.knowledgeDetails[photoId] = summary;
-          available = true;
-        } catch {
-          if (state.photoId !== photoId) return;
-          available = false;
+          setKnowledgeHints(true);
+          await loadKnowledge();
+        } catch (error) {
+          if (state.photoId === photoId) {
+            setKnowledgeHints(false);
+          }
         }
-        if (state.photoId !== photoId) return;
-        setKnowledgeHints(available);
-        await loadKnowledge();
+      }
+
+      function setKnowledgeStatus(text, isWarning = false) {
+        knowledgeStatus.textContent = text;
+        knowledgeStatus.classList.toggle("warning", Boolean(isWarning));
+      }
+
+      function hasKnowledgeFilter() {
+        return state.knowledgeFilter.kind !== "all";
+      }
+
+      function describeKnowledgeFilter() {
+        const filter = state.knowledgeFilter;
+        if (filter.kind === "style") {
+          return `图片风格「${filter.style}」`;
+        }
+        if (filter.kind === "tag") {
+          const label = KNOWLEDGE_DIMENSION_LABELS[filter.dimension] || "标签";
+          return `${label}「${filter.tag}」`;
+        }
+        return "";
       }
 
       function buildKnowledgeListUrl(offset = 0) {
-        const filter = state.knowledgeFilter;
         const params = new URLSearchParams();
         params.set("limit", String(KNOWLEDGE_PAGE_SIZE));
         params.set("offset", String(offset));
-        if (filter.tag) {
+        const filter = state.knowledgeFilter;
+        if (filter.kind === "style" && filter.style) {
+          params.set("style", filter.style);
+        } else if (filter.kind === "tag" && filter.tag) {
           params.set("tag", filter.tag);
           if (filter.dimension) params.set("dimension", filter.dimension);
         }
-        if (filter.category) params.set("category", filter.category);
+        const query = state.knowledgeSearch.applied;
+        if (query) params.set("q", query);
         return `/api/knowledge/summaries?${params.toString()}`;
       }
 
@@ -1395,624 +1916,906 @@
         knowledgeLoadSequence += 1;
         const sequence = knowledgeLoadSequence;
         knowledgeViewLoading = true;
-        const button = el("refreshKnowledgeBtn");
-        button.disabled = true;
-        button.textContent = "刷新中...";
-        knowledgeStatus.classList.remove("warning");
-        knowledgeStatus.textContent = "正在加载学习总结...";
+        const refreshButton = el("refreshKnowledgeBtn");
+        refreshButton.disabled = true;
+        refreshButton.textContent = "刷新中...";
+        setKnowledgeStatus("正在加载学习总结...");
         try {
           const [overview, list] = await Promise.all([
             getJson("/api/knowledge/overview"),
-            getJson(buildKnowledgeListUrl()),
+            getJson(buildKnowledgeListUrl(0)),
           ]);
           if (sequence !== knowledgeLoadSequence) return;
           state.knowledgeOverview = overview;
-          state.knowledgeList = list;
+          state.knowledgeList = {
+            total: Number.isFinite(list.total) ? list.total : 0,
+            limit: list.limit,
+            offset: list.offset,
+            items: Array.isArray(list.items) ? list.items.slice() : [],
+          };
           renderKnowledgeStats(overview);
-          renderKnowledgeFilters(overview);
-          renderKnowledgeCards(list);
+          renderKnowledgeTree(overview);
+          renderKnowledgeGallery(state.knowledgeList.items);
+          renderKnowledgeSearchSummary(state.knowledgeList.total);
+          renderKnowledgeEmptyState(state.knowledgeList.total);
+          updateKnowledgeLoadMoreButton();
           updateKnowledgeRebuildButton();
-          knowledgeStatus.textContent = describeKnowledgeLoadStatus(list);
+          setKnowledgeStatus(describeKnowledgeLoadStatus(state.knowledgeList));
         } catch (error) {
           if (sequence !== knowledgeLoadSequence) return;
-          knowledgeStatus.classList.add("warning");
-          knowledgeStatus.textContent = errorMessage(error, "无法加载学习总结。");
-          if (!state.knowledgeList) renderKnowledgeLoadFailure(error);
+          setKnowledgeStatus(errorMessage(error, "学习总结加载失败。"), true);
+          if (!state.knowledgeList) {
+            renderKnowledgeLoadFailure(error);
+          }
         } finally {
           if (sequence === knowledgeLoadSequence) {
             knowledgeViewLoading = false;
+            refreshButton.disabled = false;
+            refreshButton.textContent = KNOWLEDGE_REFRESH_LABEL;
+          }
+        }
+      }
+
+      async function loadKnowledgeMore() {
+        const list = state.knowledgeList;
+        if (!list || !Array.isArray(list.items)) return;
+        const button = el("knowledgeLoadMoreBtn");
+        if (button.disabled || button.hidden) return;
+        const offset = list.items.length;
+        if (offset >= list.total) return;
+        const sequence = knowledgeLoadSequence;
+        button.disabled = true;
+        button.textContent = "加载中...";
+        try {
+          const page = await getJson(buildKnowledgeListUrl(offset));
+          if (sequence !== knowledgeLoadSequence) return;
+          const newItems = Array.isArray(page.items) ? page.items : [];
+          list.items = list.items.concat(newItems);
+          list.total = Number.isFinite(page.total) ? page.total : list.total;
+          appendKnowledgeTiles(newItems);
+          renderKnowledgeEmptyState(list.total);
+          updateKnowledgeLoadMoreButton();
+          setKnowledgeStatus(describeKnowledgeLoadStatus(list));
+        } catch (error) {
+          if (sequence !== knowledgeLoadSequence) return;
+          setKnowledgeStatus(errorMessage(error, "加载更多学习总结失败。"), true);
+        } finally {
+          if (sequence === knowledgeLoadSequence) {
             button.disabled = false;
-            button.textContent = KNOWLEDGE_REFRESH_LABEL;
+            button.textContent = "加载更多";
           }
         }
       }
 
       function describeKnowledgeLoadStatus(list) {
-        const total = Number(list.total) || 0;
+        const filterText = describeKnowledgeFilter();
+        const query = state.knowledgeSearch.applied;
+        const total = list && Number.isFinite(list.total) ? list.total : 0;
         const shown = list && Array.isArray(list.items) ? list.items.length : 0;
-        const filtered = hasKnowledgeFilter();
         if (total === 0) {
-          return filtered
-            ? "当前筛选没有匹配的学习总结。"
-            : "还没有学习总结，完成一次照片分析后会自动生成。";
+          if (query) return `没有找到匹配「${query}」的照片。`;
+          if (filterText) return `${filterText}目录下还没有照片。`;
+          return "还没有学习总结。";
         }
-        if (shown < total) {
-          return `已显示最近 ${shown} 条，共 ${total} 条学习总结${filtered ? "（已筛选）" : ""}。`;
-        }
-        return filtered ? `已筛选出 ${total} 条学习总结。` : `共 ${total} 条学习总结。`;
+        let suffix = "";
+        if (filterText) suffix += ` · 当前目录：${filterText}`;
+        if (query) suffix += ` · 搜索「${query}」`;
+        if (shown < total) return `共 ${total} 张照片，已显示 ${shown} 张${suffix}。`;
+        return `共 ${total} 张照片${suffix}。`;
       }
 
       function renderKnowledgeLoadFailure(error) {
-        const grid = el("knowledgeGrid");
-        grid.hidden = true;
-        grid.replaceChildren();
-        el("knowledgeStats").hidden = true;
-        el("knowledgeFilters").hidden = true;
-        const empty = el("knowledgeEmpty");
-        empty.hidden = false;
+        el("knowledgeEmpty").hidden = false;
         el("knowledgeEmptyTitle").textContent = "学习总结加载失败";
-        el("knowledgeEmptyBody").textContent = errorMessage(
-          error,
-          "无法加载学习总结，请稍后点击「刷新知识库」重试。",
-        );
+        el("knowledgeEmptyBody").textContent = errorMessage(error, "无法加载学习总结，请稍后重试。");
+        el("knowledgeGrid").hidden = true;
+        el("knowledgeLoadMoreBtn").hidden = true;
+        el("knowledgeSearchSummary").hidden = true;
       }
 
       function renderKnowledgeStats(overview) {
-        const stats = el("knowledgeStats");
-        const total = Number(overview.total_summaries) || 0;
-        if (total === 0) {
-          stats.hidden = true;
-          stats.textContent = "";
+        const element = el("knowledgeStats");
+        const total =
+          overview && Number.isFinite(overview.total_summaries) ? overview.total_summaries : 0;
+        if (!overview || total === 0) {
+          element.hidden = true;
+          element.textContent = "";
           return;
         }
-        const categories = Number(overview.covered_categories) || 0;
-        const average = overview.average_intensity;
-        const averageText =
-          typeof average === "number" && Number.isFinite(average)
-            ? `${Math.round(average * 100)}%`
-            : "暂无";
-        stats.textContent =
+        const categories = Number.isFinite(overview.covered_categories)
+          ? overview.covered_categories
+          : 0;
+        const average = Number.isFinite(overview.average_intensity)
+          ? `${Math.round(overview.average_intensity * 100)}%`
+          : "未知";
+        element.hidden = false;
+        element.textContent =
           `已记录 ${total} 张 · 覆盖 ${categories} 类 · ` +
-          `平均推荐强度 ${averageText} · 最近更新 ${formatKnowledgeTimestamp(overview.latest_generated_at)}`;
-        stats.hidden = false;
+          `平均推荐强度 ${average} · 最近更新 ${formatKnowledgeTimestamp(overview.latest_generated_at)}`;
       }
 
-      function renderKnowledgeFilters(overview) {
-        const categories = Array.isArray(overview.primary_categories)
-          ? overview.primary_categories
-          : [];
-        const categoryRow = el("knowledgeCategoryFilterRow");
-        const categoryChips = el("knowledgeCategoryChips");
-        categoryChips.replaceChildren();
-        categories.forEach((item) => {
-          const category = String((item && item.category) || "");
-          if (!category) return;
-          const selected = state.knowledgeFilter.category === category;
-          categoryChips.appendChild(
-            createKnowledgeChip(category, Number(item.count) || 0, selected, () =>
-              toggleKnowledgeCategory(category),
+      function renderKnowledgeTree(overview) {
+        el("knowledgeAllPhotosCount").textContent = String(
+          overview && Number.isFinite(overview.total_summaries) ? overview.total_summaries : 0,
+        );
+        const container = el("knowledgeTreeGroups");
+        container.replaceChildren();
+        const styleTags = overview && Array.isArray(overview.style_tags) ? overview.style_tags : [];
+        if (styleTags.length > 0) {
+          container.appendChild(
+            createKnowledgeTreeGroup(
+              "styles",
+              "图片风格",
+              styleTags.map((style) => ({
+                kind: "style",
+                label: style.name,
+                value: style.name,
+                count: style.count,
+              })),
             ),
           );
-        });
-        categoryRow.hidden = categoryChips.childElementCount === 0;
-
-        const facets = Array.isArray(overview.facets) ? overview.facets : [];
-        const facetRows = el("knowledgeFacetRows");
-        facetRows.replaceChildren();
-        facets.forEach((facet) => {
-          const tags = Array.isArray(facet.tags) ? facet.tags : [];
-          if (tags.length === 0) return;
-          const row = document.createElement("div");
-          row.className = "filter-row";
-          const label = document.createElement("span");
-          label.className = "filter-label";
-          label.textContent =
-            facet.label || KNOWLEDGE_DIMENSION_LABELS[facet.dimension] || "标签";
-          const chips = document.createElement("div");
-          chips.className = "chip-row";
-          tags.forEach((tag) => {
-            const tagLabel = String((tag && tag.label) || "");
-            if (!tagLabel) return;
-            const dimension = tag.dimension || facet.dimension || null;
-            const selected =
-              state.knowledgeFilter.tag === tagLabel &&
-              state.knowledgeFilter.dimension === dimension;
-            chips.appendChild(
-              createKnowledgeChip(tagLabel, Number(tag.count) || 0, selected, () =>
-                toggleKnowledgeTag(dimension, tagLabel),
-              ),
-            );
-          });
-          row.append(label, chips);
-          facetRows.appendChild(row);
-        });
-
-        const filters = el("knowledgeFilters");
-        filters.hidden =
-          categoryChips.childElementCount === 0 && facetRows.childElementCount === 0;
-        el("clearKnowledgeFiltersBtn").hidden = !hasKnowledgeFilter();
-        const activeText = describeKnowledgeFilter();
-        const active = el("knowledgeActiveFilter");
-        active.textContent = activeText;
-        active.hidden = !activeText;
-      }
-
-      function createKnowledgeChip(label, count, selected, onClick) {
-        const chip = document.createElement("button");
-        chip.type = "button";
-        chip.className = selected ? "chip selected" : "chip";
-        chip.textContent = label;
-        if (count > 0) {
-          const badge = document.createElement("span");
-          badge.className = "chip-count";
-          badge.textContent = String(count);
-          chip.appendChild(badge);
         }
-        chip.addEventListener("click", onClick);
-        return chip;
+        const facets = overview && Array.isArray(overview.facets) ? overview.facets : [];
+        const byDimension = new Map();
+        for (const facet of facets) {
+          if (facet && facet.dimension) byDimension.set(facet.dimension, facet);
+        }
+        for (const dimension of KNOWLEDGE_TREE_DIMENSION_ORDER) {
+          const facet = byDimension.get(dimension);
+          if (!facet || !Array.isArray(facet.tags) || facet.tags.length === 0) continue;
+          const title = facet.label || KNOWLEDGE_DIMENSION_LABELS[dimension] || dimension;
+          container.appendChild(
+            createKnowledgeTreeGroup(
+              `dimension-${dimension}`,
+              title,
+              facet.tags.map((tag) => ({
+                kind: "tag",
+                label: tag.label,
+                value: tag.label,
+                dimension: tag.dimension || dimension,
+                count: tag.count,
+              })),
+            ),
+          );
+        }
+        renderKnowledgeTreeSelection();
       }
 
-      function toggleKnowledgeCategory(category) {
-        state.knowledgeFilter.category =
-          state.knowledgeFilter.category === category ? null : category;
+      function createKnowledgeTreeGroup(groupKey, title, entries) {
+        const group = document.createElement("div");
+        group.className = "knowledge-tree-group";
+        const collapsed = Boolean(state.knowledgeTreeCollapsed[groupKey]);
+        if (collapsed) group.classList.add("collapsed");
+        const toggle = document.createElement("button");
+        toggle.type = "button";
+        toggle.className = "knowledge-tree-group-toggle";
+        toggle.setAttribute("aria-expanded", collapsed ? "false" : "true");
+        const caret = document.createElement("span");
+        caret.className = "knowledge-tree-caret";
+        caret.textContent = "▾";
+        const titleElement = document.createElement("span");
+        titleElement.className = "knowledge-tree-label";
+        titleElement.textContent = title;
+        toggle.append(caret, titleElement);
+        toggle.addEventListener("click", () => {
+          state.knowledgeTreeCollapsed[groupKey] = !state.knowledgeTreeCollapsed[groupKey];
+          group.classList.toggle("collapsed", state.knowledgeTreeCollapsed[groupKey]);
+          toggle.setAttribute(
+            "aria-expanded",
+            state.knowledgeTreeCollapsed[groupKey] ? "false" : "true",
+          );
+        });
+        const items = document.createElement("div");
+        items.className = "knowledge-tree-items";
+        for (const entry of entries) {
+          items.appendChild(createKnowledgeTreeItem(entry));
+        }
+        group.append(toggle, items);
+        return group;
+      }
+
+      function createKnowledgeTreeItem(entry) {
+        const item = document.createElement("button");
+        item.type = "button";
+        item.className = "knowledge-tree-item";
+        if (isKnowledgeTreeEntrySelected(entry)) item.classList.add("selected");
+        const label = document.createElement("span");
+        label.className = "knowledge-tree-label";
+        label.textContent = entry.label;
+        const count = document.createElement("span");
+        count.className = "knowledge-tree-count";
+        count.textContent = String(entry.count);
+        item.append(label, count);
+        item.addEventListener("click", () => {
+          selectKnowledgeTreeEntry(entry);
+        });
+        return item;
+      }
+
+      function isKnowledgeTreeEntrySelected(entry) {
+        const filter = state.knowledgeFilter;
+        if (entry.kind === "style") {
+          return filter.kind === "style" && filter.style === entry.value;
+        }
+        return (
+          filter.kind === "tag" &&
+          filter.dimension === entry.dimension &&
+          filter.tag === entry.value
+        );
+      }
+
+      function renderKnowledgeTreeSelection() {
+        el("knowledgeAllPhotosBtn").classList.toggle(
+          "selected",
+          state.knowledgeFilter.kind === "all",
+        );
+      }
+
+      function selectKnowledgeAllPhotos() {
+        if (state.knowledgeFilter.kind === "all") return;
+        state.knowledgeFilter = { kind: "all", dimension: null, tag: null, style: null };
         void loadKnowledge();
       }
 
-      function toggleKnowledgeTag(dimension, label) {
-        const filter = state.knowledgeFilter;
-        if (filter.tag === label && filter.dimension === dimension) {
-          filter.tag = null;
-          filter.dimension = null;
+      function selectKnowledgeTreeEntry(entry) {
+        if (isKnowledgeTreeEntrySelected(entry)) {
+          state.knowledgeFilter = { kind: "all", dimension: null, tag: null, style: null };
+        } else if (entry.kind === "style") {
+          state.knowledgeFilter = {
+            kind: "style",
+            dimension: null,
+            tag: null,
+            style: entry.value,
+          };
         } else {
-          filter.tag = label;
-          filter.dimension = dimension || null;
+          state.knowledgeFilter = {
+            kind: "tag",
+            dimension: entry.dimension,
+            tag: entry.value,
+            style: null,
+          };
         }
         void loadKnowledge();
       }
 
-      function clearKnowledgeFilters() {
-        state.knowledgeFilter = { dimension: null, tag: null, category: null };
+      let knowledgeSearchTimer = null;
+
+      function updateKnowledgeSearchClearButton() {
+        el("knowledgeSearchClearBtn").hidden =
+          el("knowledgeSearchInput").value.trim() === "";
+      }
+
+      function scheduleKnowledgeSearch(rawValue) {
+        const value = String(rawValue == null ? "" : rawValue);
+        updateKnowledgeSearchClearButton();
+        if (knowledgeSearchTimer !== null) {
+          clearTimeout(knowledgeSearchTimer);
+        }
+        knowledgeSearchTimer = setTimeout(() => {
+          knowledgeSearchTimer = null;
+          commitKnowledgeSearch(value);
+        }, KNOWLEDGE_SEARCH_DEBOUNCE_MS);
+      }
+
+      function commitKnowledgeSearch(rawValue) {
+        if (knowledgeSearchTimer !== null) {
+          clearTimeout(knowledgeSearchTimer);
+          knowledgeSearchTimer = null;
+        }
+        const query = String(rawValue == null ? "" : rawValue).trim();
+        el("knowledgeSearchInput").value = query;
+        el("knowledgeSearchClearBtn").hidden = query === "";
+        if (state.knowledgeSearch.applied === query) return;
+        state.knowledgeSearch.query = query;
+        state.knowledgeSearch.applied = query;
         void loadKnowledge();
       }
 
-      function hasKnowledgeFilter() {
-        const filter = state.knowledgeFilter;
-        return Boolean(filter.category || filter.tag || filter.dimension);
-      }
-
-      function describeKnowledgeFilter() {
-        const filter = state.knowledgeFilter;
-        const parts = [];
-        if (filter.category) parts.push(`主分类「${filter.category}」`);
-        if (filter.tag) {
-          const dimension = filter.dimension
-            ? KNOWLEDGE_DIMENSION_LABELS[filter.dimension] || filter.dimension
-            : "";
-          parts.push(dimension ? `${dimension}「${filter.tag}」` : `标签「${filter.tag}」`);
+      function clearKnowledgeSearch() {
+        if (knowledgeSearchTimer !== null) {
+          clearTimeout(knowledgeSearchTimer);
+          knowledgeSearchTimer = null;
         }
-        return parts.length ? `当前筛选：${parts.join(" · ")}` : "";
+        el("knowledgeSearchInput").value = "";
+        el("knowledgeSearchClearBtn").hidden = true;
+        if (state.knowledgeSearch.applied === "") return;
+        state.knowledgeSearch.query = "";
+        state.knowledgeSearch.applied = "";
+        void loadKnowledge();
       }
 
-      function renderKnowledgeCards(list) {
+      function handleKnowledgeSearchInput(event) {
+        const value = event && event.target ? event.target.value : el("knowledgeSearchInput").value;
+        scheduleKnowledgeSearch(value);
+      }
+
+      function handleKnowledgeSearchKeydown(event) {
+        if (!event || event.key !== "Enter") return;
+        event.preventDefault();
+        const value = event.target ? event.target.value : el("knowledgeSearchInput").value;
+        commitKnowledgeSearch(value);
+      }
+
+      function renderKnowledgeSearchSummary(total) {
+        const element = el("knowledgeSearchSummary");
+        const query = state.knowledgeSearch.applied;
+        if (!query) {
+          element.hidden = true;
+          element.textContent = "";
+          return;
+        }
+        element.hidden = false;
+        element.textContent = `搜索「${query}」：${total} 条`;
+      }
+
+      function renderKnowledgeGallery(items) {
         const grid = el("knowledgeGrid");
-        const items = list && Array.isArray(list.items) ? list.items : [];
-        knowledgeCardRefs.clear();
         grid.replaceChildren();
-        items.forEach((item) => {
-          if (!item || typeof item.photo_id !== "string") return;
-          const card = renderKnowledgeCard(item);
-          knowledgeCardRefs.set(item.photo_id, card);
-          grid.appendChild(card);
-        });
         grid.hidden = items.length === 0;
-        renderKnowledgeEmpty(items.length === 0);
-        void hydrateKnowledgeDetails(items);
+        for (const item of items) {
+          grid.appendChild(renderKnowledgeTile(item));
+        }
       }
 
-      function renderKnowledgeEmpty(isEmpty) {
+      function appendKnowledgeTiles(items) {
+        const grid = el("knowledgeGrid");
+        for (const item of items) {
+          grid.appendChild(renderKnowledgeTile(item));
+        }
+        if (grid.childElementCount > 0) grid.hidden = false;
+      }
+
+      function renderKnowledgeTile(item) {
+        const tile = document.createElement("button");
+        tile.type = "button";
+        tile.className = "knowledge-tile";
+        tile.setAttribute("aria-label", "查看修图笔记");
+        const imageUrl = knowledgeAssetUrl(item.image && item.image.display_url);
+        if (imageUrl) {
+          const image = document.createElement("img");
+          image.src = imageUrl;
+          image.alt =
+            item.image && item.image.original_filename
+              ? `原图：${item.image.original_filename}`
+              : "原图";
+          image.loading = "lazy";
+          tile.appendChild(image);
+        } else {
+          const placeholder = document.createElement("span");
+          placeholder.className = "knowledge-tile-placeholder";
+          placeholder.textContent = "无预览";
+          tile.appendChild(placeholder);
+        }
+        tile.addEventListener("click", () => {
+          void openKnowledgeNote(item.photo_id);
+        });
+        return tile;
+      }
+
+      function updateKnowledgeLoadMoreButton() {
+        const button = el("knowledgeLoadMoreBtn");
+        const list = state.knowledgeList;
+        const loaded = list && Array.isArray(list.items) ? list.items.length : 0;
+        const total = list && Number.isFinite(list.total) ? list.total : 0;
+        button.hidden = !list || total === 0 || loaded >= total;
+        button.disabled = false;
+        button.textContent = "加载更多";
+      }
+
+      function renderKnowledgeEmptyState(total) {
         const empty = el("knowledgeEmpty");
-        if (!isEmpty) {
+        if (total > 0) {
           empty.hidden = true;
           return;
         }
         empty.hidden = false;
-        if (hasKnowledgeFilter()) {
-          el("knowledgeEmptyTitle").textContent = "当前筛选没有结果";
+        const query = state.knowledgeSearch.applied;
+        const filterText = describeKnowledgeFilter();
+        if (query) {
+          el("knowledgeEmptyTitle").textContent = "没有找到匹配的照片";
           el("knowledgeEmptyBody").textContent =
-            "换一个标签或主分类试试，也可以点「清除筛选」查看全部学习总结。";
+            `搜索「${query}」没有结果，试试更短的关键词或其他标签；搜索支持近似匹配。`;
+        } else if (filterText) {
+          el("knowledgeEmptyTitle").textContent = "当前目录没有照片";
+          el("knowledgeEmptyBody").textContent =
+            `${filterText}目录下还没有修完的照片，可以切换到「全部照片」或试试搜索。`;
         } else {
           el("knowledgeEmptyTitle").textContent = "还没有学习总结";
           el("knowledgeEmptyBody").textContent =
-            "请先在「上传照片」完成一次分析，系统会自动生成学习总结并显示在这里。";
+            "先在「修图」上传并分析一张照片，学习总结会自动出现在这里。";
         }
-      }
-
-      function renderKnowledgeCard(item) {
-        const card = document.createElement("article");
-        card.className = "knowledge-card";
-
-        const image = item.image || {};
-        const media = document.createElement("div");
-        media.className = "knowledge-card-media";
-        const thumbnailUrl = knowledgeAssetUrl(image.display_url);
-        if (thumbnailUrl) {
-          const thumbnail = document.createElement("img");
-          thumbnail.className = "knowledge-thumbnail";
-          thumbnail.src = thumbnailUrl;
-          thumbnail.alt = `学习总结缩略图：${item.primary_category || "未分类"}`;
-          thumbnail.loading = "lazy";
-          thumbnail.addEventListener("click", () => openKnowledgeImage(thumbnailUrl));
-          media.appendChild(thumbnail);
-          if (item.primary_category) {
-            const badge = document.createElement("span");
-            badge.className = "pill knowledge-category-badge";
-            badge.textContent = item.primary_category;
-            media.appendChild(badge);
-          }
-        } else {
-          const placeholder = document.createElement("div");
-          placeholder.className = "knowledge-thumbnail-placeholder";
-          placeholder.textContent = "缩略图不可用";
-          media.appendChild(placeholder);
-        }
-        card.appendChild(media);
-
-        const body = document.createElement("div");
-        body.className = "knowledge-card-body";
-
-        const metaParts = [];
-        const dimensions =
-          image.width && image.height ? `${image.width} × ${image.height}` : "";
-        if (image.format) metaParts.push(image.format);
-        if (dimensions) metaParts.push(dimensions);
-        const size = formatKnowledgeFileSize(image.file_size);
-        if (size) metaParts.push(size);
-        if (image.color_mode) metaParts.push(image.color_mode);
-        if (metaParts.length) appendParagraph(body, metaParts.join(" · "), "meta-line");
-
-        const sourceParts = [];
-        if (image.original_filename) sourceParts.push(image.original_filename);
-        if (image.render_source === "embedded_preview") sourceParts.push("CR3 内嵌预览");
-        const generated = formatKnowledgeTimestamp(item.generated_at);
-        if (generated) sourceParts.push(`生成于 ${generated}`);
-        if (sourceParts.length) appendParagraph(body, sourceParts.join(" · "), "meta-line");
-
-        if (item.overall_summary) {
-          appendParagraph(body, item.overall_summary, "knowledge-summary");
-        }
-
-        const tags = Array.isArray(item.tags) ? item.tags : [];
-        if (tags.length) {
-          const tagList = document.createElement("div");
-          tagList.className = "chip-row knowledge-tags";
-          tags.forEach((tag) => {
-            if (!tag || !tag.label) return;
-            const pill = document.createElement("span");
-            pill.className =
-              tag.source === "measurement"
-                ? "pill knowledge-tag measurement"
-                : "pill knowledge-tag";
-            pill.textContent = tag.label;
-            if (tag.source === "measurement") {
-              pill.title = "由图像测量推断";
-            }
-            tagList.appendChild(pill);
-          });
-          body.appendChild(tagList);
-        }
-
-        const title = document.createElement("h4");
-        title.className = "knowledge-directions-title";
-        title.textContent = "修图方向";
-        body.appendChild(title);
-
-        const directions = document.createElement("div");
-        directions.className = "knowledge-directions";
-        body.appendChild(directions);
-        const cached = state.knowledgeDetails[item.photo_id];
-        if (cached) renderKnowledgeDirections(directions, cached);
-        else renderKnowledgeDirectionPreview(directions, item);
-
-        card.appendChild(body);
-        return card;
       }
 
       function formatKnowledgeTimestamp(value) {
-        if (typeof value !== "string" || !value) return "未知";
+        if (!value) return "未知";
         const date = new Date(value);
         if (Number.isNaN(date.getTime())) return "未知";
-        const pad = (part) => String(part).padStart(2, "0");
+        const pad = (number) => String(number).padStart(2, "0");
         return (
           `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ` +
           `${pad(date.getHours())}:${pad(date.getMinutes())}`
         );
       }
 
-      function formatKnowledgeFileSize(value) {
-        const bytes = Number(value);
-        if (!Number.isFinite(bytes) || bytes <= 0) return "";
-        if (bytes < 1024) return `${Math.round(bytes)} B`;
+      function formatKnowledgeFileSize(bytes) {
+        if (!Number.isFinite(bytes) || bytes <= 0) return "未知大小";
+        if (bytes < 1024) return `${bytes} B`;
         if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
         return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
       }
 
       function knowledgeAssetUrl(value, cacheBust = false) {
-        if (typeof value !== "string" || !value) return "";
+        if (typeof value !== "string" || value.trim() === "") return "";
         try {
-          const url = new URL(sameOriginUrl(value));
+          const url = new URL(sameOriginUrl(value), window.location.href);
           if (cacheBust) url.searchParams.set("t", String(Date.now()));
           return url.href;
-        } catch {
+        } catch (error) {
           return "";
         }
       }
 
-      function openKnowledgeImage(href) {
-        if (!href) return;
-        window.open(href, "_blank", "noopener");
-      }
-
       function createIntensityPill(intensity, verified = true) {
         const pill = document.createElement("span");
-        const percent =
-          typeof intensity === "number" && Number.isFinite(intensity)
-            ? Math.round(intensity * 100)
-            : null;
         pill.className = "pill";
-        pill.textContent = percent === null ? "推荐强度未知" : `推荐 ${percent}%`;
-        if (verified === false) {
-          pill.classList.add("warn");
-          pill.title = "该方向的预览生成或校验未通过";
-        }
+        const value = Number(intensity);
+        const percent = Number.isFinite(value) ? Math.round(value * 100) : 0;
+        pill.textContent = `推荐 ${percent}%`;
+        if (verified === false) pill.classList.add("warn");
         return pill;
       }
 
-      function renderKnowledgeDirectionPreview(container, item) {
-        appendKnowledgeDirectionSummary(container, item);
-        appendParagraph(container, "正在加载推荐理由与参数总结...", "meta-line");
+      function describeKnowledgeTagSource(tag) {
+        if (tag && tag.source === "measurement") return "由图像测量推断";
+        return "由 AI 分析得出";
       }
 
-      function appendKnowledgeDirectionSummary(container, item) {
-        const names = Array.isArray(item.style_names) ? item.style_names : [];
-        const intensities = Array.isArray(item.recommended_intensities)
-          ? item.recommended_intensities
-          : [];
-        if (names.length || intensities.length) {
-          const list = document.createElement("div");
-          list.className = "knowledge-direction-preview-list";
-          names.forEach((name, index) => {
-            const row = document.createElement("div");
-            row.className = "knowledge-direction-preview-row";
-            const label = document.createElement("span");
-            label.textContent = `${index + 1}. ${name || "未命名方向"}`;
-            row.appendChild(label);
-            row.appendChild(createIntensityPill(intensities[index], true));
-            list.appendChild(row);
-          });
-          container.appendChild(list);
-        }
+      const knowledgeNoteState = {
+        photoId: null,
+        item: null,
+        summary: null,
+        directionIndex: -1,
+        currentImageUrl: "",
+      };
+      let knowledgeNoteRequestSeq = 0;
 
-        const preview = knowledgeAssetUrl(item.preview_url, true);
-        if (preview) {
-          const figure = document.createElement("figure");
-          figure.className = "knowledge-direction-preview";
-          const img = document.createElement("img");
-          img.src = preview;
-          img.alt = "推荐强度预览";
-          img.loading = "lazy";
-          img.addEventListener("click", () => openKnowledgeImage(preview));
-          const caption = document.createElement("figcaption");
-          caption.className = "meta-line";
-          caption.textContent = "推荐强度预览（点击放大）";
-          figure.append(img, caption);
-          container.appendChild(figure);
-        }
+      function isKnowledgeNoteOpen() {
+        return el("knowledgeNote").hidden === false;
       }
 
-      function renderKnowledgeDirections(container, summary) {
-        container.replaceChildren();
-        const directions =
-          summary && Array.isArray(summary.directions) ? summary.directions : [];
-        directions.forEach((direction, index) => {
-          renderKnowledgeDirection(container, direction, index);
-        });
-      }
-
-      function renderKnowledgeDirection(container, direction, index) {
-        const safe = direction || {};
-        const block = document.createElement("div");
-        block.className = "knowledge-direction";
-
-        const head = document.createElement("div");
-        head.className = "knowledge-direction-head";
-        const title = document.createElement("h4");
-        title.textContent = `${index + 1}. ${safe.style_name || "未命名方向"}`;
-        head.appendChild(title);
-        head.appendChild(
-          createIntensityPill(safe.recommended_intensity, safe.verified !== false),
-        );
-        if (safe.verified === false) {
-          const warn = document.createElement("span");
-          warn.className = "pill warn";
-          warn.textContent = "预览未通过校验";
-          warn.title = "该方向的预览图生成或校验未通过，参数仅供参考。";
-          head.appendChild(warn);
+      async function openKnowledgeNote(photoId) {
+        if (!photoId) return;
+        const item =
+          state.knowledgeList && Array.isArray(state.knowledgeList.items)
+            ? state.knowledgeList.items.find((candidate) => candidate.photo_id === photoId) || null
+            : null;
+        knowledgeNoteRequestSeq += 1;
+        const sequence = knowledgeNoteRequestSeq;
+        knowledgeNoteState.photoId = photoId;
+        knowledgeNoteState.item = item;
+        knowledgeNoteState.summary = null;
+        knowledgeNoteState.directionIndex = -1;
+        knowledgeNoteState.currentImageUrl = "";
+        el("knowledgeNote").hidden = false;
+        document.body.classList.add("knowledge-note-open");
+        el("knowledgeNoteLoadingCard").hidden = false;
+        el("knowledgeNoteContent").hidden = true;
+        el("knowledgeNoteError").hidden = true;
+        el("knowledgeNoteErrorText").textContent = "";
+        el("knowledgeNoteImage").removeAttribute("src");
+        el("knowledgeNoteImage").hidden = true;
+        el("knowledgeNoteOriginalImage").removeAttribute("src");
+        el("knowledgeNoteOriginalImage").hidden = true;
+        el("knowledgeNoteManual").hidden = true;
+        el("knowledgeNoteManualBody").replaceChildren();
+        el("knowledgeNoteMediaHint").hidden = true;
+        el("knowledgeNoteMediaHint").textContent = "";
+        el("knowledgeNoteLoading").hidden = false;
+        el("knowledgeNoteImage").alt = "修图方向预览";
+        const cached = state.knowledgeDetails[photoId];
+        if (cached) {
+          renderKnowledgeNote(cached, item);
+          return;
         }
-        block.appendChild(head);
-
-        if (safe.intensity_reason) {
-          appendLabeledParagraph(block, "推荐理由：", safe.intensity_reason);
-        }
-        if (safe.parameters_summary) {
-          appendLabeledParagraph(block, "参数总结：", safe.parameters_summary);
-        }
-
-        const recommended = Number(safe.recommended_intensity);
-        const effective = Number(safe.effective_strength);
-        if (
-          Number.isFinite(recommended) &&
-          Number.isFinite(effective) &&
-          recommended - effective > 0.005
-        ) {
-          appendParagraph(
-            block,
-            `实际生效强度 ${Math.round(effective * 100)}%（已按原图亮度自适应）`,
-            "meta-line",
-          );
-        }
-
-        const warnings = Array.isArray(safe.warnings)
-          ? safe.warnings.filter(Boolean)
-          : [];
-        if (warnings.length) {
-          const list = document.createElement("ul");
-          list.className = "knowledge-warnings";
-          warnings.forEach((warning) => {
-            const warningItem = document.createElement("li");
-            warningItem.className = "warning";
-            warningItem.textContent = warning;
-            list.appendChild(warningItem);
-          });
-          block.appendChild(list);
-        }
-
-        const preview = knowledgeAssetUrl(safe.preview_url, true);
-        if (preview) {
-          const figure = document.createElement("figure");
-          figure.className = "knowledge-direction-preview";
-          const img = document.createElement("img");
-          img.src = preview;
-          img.alt = `修图预览：${safe.style_name || "方向"}`;
-          img.loading = "lazy";
-          img.addEventListener("click", () => openKnowledgeImage(preview));
-          const caption = document.createElement("figcaption");
-          caption.className = "meta-line";
-          const intensity = Number(
-            Number.isFinite(Number(safe.preview_intensity))
-              ? safe.preview_intensity
-              : safe.recommended_intensity,
-          );
-          caption.textContent = Number.isFinite(intensity)
-            ? `预览 · 推荐强度 ${Math.round(intensity * 100)}%（点击放大）`
-            : "预览（点击放大）";
-          figure.append(img, caption);
-          block.appendChild(figure);
-        } else {
-          appendParagraph(block, "暂无预览图（重新生成总结可补充）。", "meta-line");
-        }
-
-        container.appendChild(block);
-      }
-
-      async function hydrateKnowledgeDetails(items) {
-        const pending = (Array.isArray(items) ? items : []).filter(
-          (item) =>
-            item &&
-            typeof item.photo_id === "string" &&
-            !state.knowledgeDetails[item.photo_id],
-        );
-        if (pending.length === 0) return;
-        let cursor = 0;
-        const workerCount = Math.min(4, pending.length);
-        const workers = [];
-        for (let index = 0; index < workerCount; index += 1) {
-          workers.push(
-            (async () => {
-              while (cursor < pending.length) {
-                const item = pending[cursor];
-                cursor += 1;
-                await hydrateKnowledgeDetail(item);
-              }
-            })(),
-          );
-        }
-        await Promise.all(workers);
-      }
-
-      async function hydrateKnowledgeDetail(item) {
-        const photoId = item.photo_id;
         try {
           const summary = await getJson(
             `/api/knowledge/summaries/${encodeURIComponent(photoId)}`,
             STATUS_TIMEOUT_MS,
           );
+          if (sequence !== knowledgeNoteRequestSeq) return;
           state.knowledgeDetails[photoId] = summary;
-          const card = knowledgeCardRefs.get(photoId);
-          if (!card) return;
-          const container = card.querySelector(".knowledge-directions");
-          if (container) renderKnowledgeDirections(container, summary);
+          renderKnowledgeNote(summary, item);
         } catch (error) {
-          const card = knowledgeCardRefs.get(photoId);
-          if (!card || state.knowledgeDetails[photoId]) return;
-          const container = card.querySelector(".knowledge-directions");
-          if (container) renderKnowledgeDirectionsError(container, error, item);
+          if (sequence !== knowledgeNoteRequestSeq) return;
+          renderKnowledgeNoteError(error, photoId);
         }
       }
 
-      function renderKnowledgeDirectionsError(container, error, item) {
-        container.replaceChildren();
-        appendKnowledgeDirectionSummary(container, item);
-        appendParagraph(
-          container,
-          errorMessage(error, "修图方向详情加载失败。"),
-          "meta-line warning",
+      function renderKnowledgeNote(summary, item) {
+        knowledgeNoteState.summary = summary;
+        knowledgeNoteState.item = item || knowledgeNoteState.item;
+        el("knowledgeNoteLoading").hidden = true;
+        el("knowledgeNoteLoadingCard").hidden = true;
+        el("knowledgeNoteError").hidden = true;
+        el("knowledgeNoteContent").hidden = false;
+        const category = summary.primary_category || (item && item.primary_category) || "综合";
+        el("knowledgeNoteCategory").textContent = category;
+        const generatedAt = summary.generated_at || (item && item.generated_at);
+        const filename =
+          summary.image && summary.image.original_filename
+            ? summary.image.original_filename
+            : "未知文件";
+        el("knowledgeNoteTime").textContent =
+          `生成于 ${formatKnowledgeTimestamp(generatedAt)} · ${filename}`;
+        const tagsElement = el("knowledgeNoteTags");
+        tagsElement.replaceChildren();
+        const tags = Array.isArray(summary.tags) ? summary.tags : [];
+        for (const tag of tags) {
+          const pill = document.createElement("span");
+          pill.className = "pill";
+          pill.textContent = tag.label;
+          pill.title = describeKnowledgeTagSource(tag);
+          tagsElement.appendChild(pill);
+        }
+        tagsElement.hidden = tags.length === 0;
+        const summaryText =
+          (summary.analysis && summary.analysis.overall_summary) ||
+          summary.overall_summary ||
+          summary.overview ||
+          "暂无分析总结。";
+        el("knowledgeNoteSummary").textContent = summaryText;
+        setKnowledgeNoteOriginalImage(
+          knowledgeAssetUrl(summary.image && summary.image.display_url),
         );
-        const retry = document.createElement("button");
-        retry.type = "button";
-        retry.className = "secondary";
-        retry.textContent = "重试加载修图方向";
-        retry.addEventListener("click", () => {
-          retry.disabled = true;
-          retry.textContent = "重试中...";
-          void hydrateKnowledgeDetail(item).finally(() => {
-            if (retry.isConnected) {
-              retry.disabled = false;
-              retry.textContent = "重试加载修图方向";
-            }
+        renderKnowledgeNoteManualEdit(summary);
+        renderKnowledgeNoteDirections(summary);
+      }
+
+      function setKnowledgeNoteOriginalImage(url) {
+        const image = el("knowledgeNoteOriginalImage");
+        if (url) {
+          image.src = url;
+          image.hidden = false;
+        } else {
+          image.removeAttribute("src");
+          image.hidden = true;
+        }
+      }
+
+      function renderKnowledgeNoteManualEdit(summary) {
+        const container = el("knowledgeNoteManual");
+        const body = el("knowledgeNoteManualBody");
+        body.replaceChildren();
+        const manual = summary.manual_edit;
+        if (!manual) {
+          container.hidden = true;
+          return;
+        }
+        container.hidden = false;
+        const head = document.createElement("div");
+        head.className = "knowledge-note-manual-head";
+        const name = document.createElement("span");
+        name.className = "knowledge-note-manual-name";
+        name.textContent = `已选择「${manual.style_name || "未命名风格"}」`;
+        head.appendChild(name);
+        const intensity = Number(manual.intensity);
+        const percent = Number.isFinite(intensity) ? Math.round(intensity * 100) : 0;
+        const intensityPill = document.createElement("span");
+        intensityPill.className = "pill";
+        intensityPill.textContent = `强度 ${percent}%`;
+        head.appendChild(intensityPill);
+        if (manual.verified === false) {
+          const warnPill = document.createElement("span");
+          warnPill.className = "pill warn";
+          warnPill.textContent = "预览未通过校验";
+          head.appendChild(warnPill);
+        }
+        const sourcePill = document.createElement("span");
+        sourcePill.className = "pill";
+        sourcePill.textContent = manual.source === "export" ? "来自导出" : "来自预览";
+        head.appendChild(sourcePill);
+        body.appendChild(head);
+        if (manual.parameters_summary) {
+          const params = document.createElement("span");
+          params.className = "knowledge-note-params";
+          const strong = document.createElement("strong");
+          strong.textContent = "参数总结：";
+          params.append(strong, document.createTextNode(manual.parameters_summary));
+          body.appendChild(params);
+        }
+        if (Array.isArray(manual.warnings) && manual.warnings.length > 0) {
+          const warnings = document.createElement("span");
+          warnings.className = "knowledge-note-warnings";
+          for (const warning of manual.warnings) {
+            const warningItem = document.createElement("span");
+            warningItem.className = "warning knowledge-note-warning";
+            warningItem.textContent = warning;
+            warnings.appendChild(warningItem);
+          }
+          body.appendChild(warnings);
+        }
+        const previewUrl = knowledgeAssetUrl(manual.preview_url);
+        if (previewUrl) {
+          const thumb = document.createElement("button");
+          thumb.type = "button";
+          thumb.className = "knowledge-note-manual-preview";
+          thumb.title = "把你的选择显示为右侧大图";
+          const image = document.createElement("img");
+          image.src = previewUrl;
+          image.alt = `${manual.style_name || "修图"}效果预览`;
+          image.loading = "lazy";
+          thumb.appendChild(image);
+          thumb.addEventListener("click", () => {
+            setKnowledgeNoteImage(
+              previewUrl,
+              `你的选择 · ${manual.style_name || "未命名风格"} · 强度 ${percent}%`,
+            );
           });
+          body.appendChild(thumb);
+        }
+      }
+
+      function findKnowledgeNoteInitialDirection(summary) {
+        const directions = Array.isArray(summary.directions) ? summary.directions : [];
+        const manual = summary.manual_edit;
+        if (manual && manual.style_id) {
+          const manualIndex = directions.findIndex(
+            (direction) =>
+              direction && direction.style_id === manual.style_id && direction.preview_url,
+          );
+          if (manualIndex >= 0) return manualIndex;
+        }
+        for (let index = 0; index < directions.length; index += 1) {
+          if (directions[index] && directions[index].preview_url) return index;
+        }
+        return directions.length > 0 ? 0 : -1;
+      }
+
+      function knowledgeNoteFallbackImageUrl() {
+        const item = knowledgeNoteState.item;
+        if (item) {
+          const preview = knowledgeAssetUrl(item.preview_url);
+          if (preview) return preview;
+          const display = knowledgeAssetUrl(item.image && item.image.display_url);
+          if (display) return display;
+        }
+        const summary = knowledgeNoteState.summary;
+        if (summary && summary.image) {
+          return knowledgeAssetUrl(summary.image.display_url);
+        }
+        return "";
+      }
+
+      function renderKnowledgeNoteDirections(summary) {
+        const container = el("knowledgeNoteDirections");
+        container.replaceChildren();
+        const directions = Array.isArray(summary.directions) ? summary.directions : [];
+        directions.forEach((direction, index) => {
+          const block = document.createElement("button");
+          block.type = "button";
+          block.className = "knowledge-note-direction";
+          const head = document.createElement("span");
+          head.className = "knowledge-note-direction-head";
+          const name = document.createElement("span");
+          name.className = "knowledge-note-direction-name";
+          name.textContent = `${index + 1}. ${direction.style_name || "未命名风格"}`;
+          head.appendChild(name);
+          head.appendChild(
+            createIntensityPill(direction.recommended_intensity, direction.verified),
+          );
+          if (direction.verified === false) {
+            const warnPill = document.createElement("span");
+            warnPill.className = "pill warn";
+            warnPill.textContent = "预览未通过校验";
+            head.appendChild(warnPill);
+          }
+          block.appendChild(head);
+          if (direction.intensity_reason) {
+            const reason = document.createElement("span");
+            reason.className = "knowledge-note-reason";
+            const strong = document.createElement("strong");
+            strong.textContent = "推荐理由：";
+            reason.append(strong, document.createTextNode(direction.intensity_reason));
+            block.appendChild(reason);
+          }
+          if (direction.parameters_summary) {
+            const params = document.createElement("span");
+            params.className = "knowledge-note-params";
+            const strong = document.createElement("strong");
+            strong.textContent = "参数总结：";
+            params.append(strong, document.createTextNode(direction.parameters_summary));
+            block.appendChild(params);
+          }
+          const effective = Number(direction.effective_strength);
+          const recommended = Number(direction.recommended_intensity);
+          if (
+            Number.isFinite(effective) &&
+            Number.isFinite(recommended) &&
+            recommended - effective > 0.005
+          ) {
+            const note = document.createElement("span");
+            note.className = "meta-line";
+            note.textContent = `实际生效强度 ${Math.round(effective * 100)}%（已按原图亮度自适应）`;
+            block.appendChild(note);
+          }
+          if (Array.isArray(direction.warnings) && direction.warnings.length > 0) {
+            const warnings = document.createElement("span");
+            warnings.className = "knowledge-note-warnings";
+            for (const warning of direction.warnings) {
+              const warningItem = document.createElement("span");
+              warningItem.className = "warning knowledge-note-warning";
+              warningItem.textContent = warning;
+              warnings.appendChild(warningItem);
+            }
+            block.appendChild(warnings);
+          }
+          block.addEventListener("click", () => {
+            selectKnowledgeNoteDirection(index);
+          });
+          container.appendChild(block);
         });
-        container.appendChild(retry);
+        const initialIndex = findKnowledgeNoteInitialDirection(summary);
+        if (initialIndex < 0) {
+          setKnowledgeNoteImage(
+            knowledgeNoteFallbackImageUrl(),
+            "暂无修图方向预览，正在显示可用的预览图。",
+          );
+          el("knowledgeNoteLoading").hidden = true;
+          return;
+        }
+        selectKnowledgeNoteDirection(initialIndex, { initial: true });
+      }
+
+      function updateKnowledgeNoteDirectionSelection() {
+        const container = el("knowledgeNoteDirections");
+        const children = Array.from(container.children || []);
+        children.forEach((child, index) => {
+          child.classList.toggle("selected", index === knowledgeNoteState.directionIndex);
+        });
+      }
+
+      function selectKnowledgeNoteDirection(index, options = {}) {
+        const summary = knowledgeNoteState.summary;
+        if (!summary || !Array.isArray(summary.directions)) return;
+        if (index < 0 || index >= summary.directions.length) return;
+        knowledgeNoteState.directionIndex = index;
+        updateKnowledgeNoteDirectionSelection();
+        const direction = summary.directions[index];
+        const preview = knowledgeAssetUrl(direction.preview_url);
+        const recommended = Number(direction.recommended_intensity);
+        const percent = Number.isFinite(recommended) ? Math.round(recommended * 100) : 0;
+        if (preview) {
+          setKnowledgeNoteImage(
+            preview,
+            `方向 ${index + 1} · ${direction.style_name || "未命名风格"} · 推荐强度 ${percent}%`,
+          );
+          return;
+        }
+        const fallback = options.initial
+          ? knowledgeNoteFallbackImageUrl()
+          : knowledgeNoteState.currentImageUrl;
+        if (fallback) {
+          setKnowledgeNoteImage(
+            fallback,
+            `方向 ${index + 1} · ${direction.style_name || "未命名风格"} 暂无预览图，暂时显示当前图片。`,
+          );
+        } else {
+          setKnowledgeNoteImage("", "这个方向暂无预览图。");
+        }
+      }
+
+      function setKnowledgeNoteImage(url, hintText) {
+        const image = el("knowledgeNoteImage");
+        if (url) {
+          knowledgeNoteState.currentImageUrl = url;
+          image.src = url;
+          image.hidden = false;
+          el("knowledgeNoteLoading").hidden = true;
+        } else {
+          image.removeAttribute("src");
+          image.hidden = true;
+        }
+        const hint = el("knowledgeNoteMediaHint");
+        hint.hidden = !hintText;
+        hint.textContent = hintText || "";
+      }
+
+      function renderKnowledgeNoteError(error, photoId) {
+        knowledgeNoteState.photoId = photoId || knowledgeNoteState.photoId;
+        el("knowledgeNoteLoading").hidden = true;
+        el("knowledgeNoteLoadingCard").hidden = true;
+        el("knowledgeNoteContent").hidden = true;
+        el("knowledgeNoteImage").hidden = true;
+        el("knowledgeNoteImage").removeAttribute("src");
+        el("knowledgeNoteOriginalImage").hidden = true;
+        el("knowledgeNoteOriginalImage").removeAttribute("src");
+        el("knowledgeNoteManual").hidden = true;
+        el("knowledgeNoteMediaHint").hidden = true;
+        el("knowledgeNoteMediaHint").textContent = "";
+        el("knowledgeNoteError").hidden = false;
+        el("knowledgeNoteErrorText").textContent = errorMessage(
+          error,
+          "学习总结详情加载失败，请稍后重试。",
+        );
+      }
+
+      function retryKnowledgeNote() {
+        const photoId = knowledgeNoteState.photoId;
+        if (photoId) {
+          void openKnowledgeNote(photoId);
+        }
+      }
+
+      function closeKnowledgeNote() {
+        if (!isKnowledgeNoteOpen()) return;
+        knowledgeNoteRequestSeq += 1;
+        knowledgeNoteState.photoId = null;
+        knowledgeNoteState.item = null;
+        knowledgeNoteState.summary = null;
+        knowledgeNoteState.directionIndex = -1;
+        knowledgeNoteState.currentImageUrl = "";
+        el("knowledgeNote").hidden = true;
+        document.body.classList.remove("knowledge-note-open");
+        el("knowledgeNoteImage").removeAttribute("src");
+        el("knowledgeNoteImage").hidden = true;
+        el("knowledgeNoteOriginalImage").removeAttribute("src");
+        el("knowledgeNoteOriginalImage").hidden = true;
+        el("knowledgeNoteManual").hidden = true;
+        el("knowledgeNoteManualBody").replaceChildren();
+        el("knowledgeNoteLoading").hidden = true;
+        el("knowledgeNoteLoadingCard").hidden = true;
+        el("knowledgeNoteContent").hidden = true;
+        el("knowledgeNoteError").hidden = true;
+        el("knowledgeNoteMediaHint").hidden = true;
+        el("knowledgeNoteMediaHint").textContent = "";
+      }
+
+      function handleKnowledgeNoteKeydown(event) {
+        if (!isKnowledgeNoteOpen()) return;
+        if (event && event.key === "Escape") {
+          event.preventDefault();
+          closeKnowledgeNote();
+        }
       }
 
       async function rebuildKnowledgeSummary() {
         const photoId = state.photoId;
-        const button = el("rebuildKnowledgeBtn");
         if (!photoId) {
-          knowledgeStatus.classList.add("warning");
-          knowledgeStatus.textContent = "请先在「上传照片」完成一次分析，再重新生成学习总结。";
+          setKnowledgeStatus("请先在「修图」上传并分析一张照片，再重新生成学习总结。", true);
           return;
         }
+        const button = el("rebuildKnowledgeBtn");
         button.disabled = true;
         button.textContent = "重新生成中...";
-        knowledgeStatus.classList.remove("warning");
-        knowledgeStatus.textContent = "正在为当前照片重新生成学习总结...";
+        setKnowledgeStatus("正在重新生成学习总结...");
         try {
           const response = await fetchWithTimeout(
             `/api/knowledge/summaries/${encodeURIComponent(photoId)}/rebuild`,
             { method: "POST" },
+            REQUEST_TIMEOUT_MS,
           );
           if (response.status === 409) {
-            knowledgeStatus.classList.add("warning");
-            knowledgeStatus.textContent =
-              "这张照片还没有完成分析，请等待分析完成后再重新生成总结。";
+            setKnowledgeStatus(
+              "这张照片还没有完成分析，请等待分析完成后再重新生成总结。",
+              true,
+            );
             return;
           }
           const summary = await handleResponse(response);
-          if (state.photoId !== photoId) return;
           state.knowledgeDetails[photoId] = summary;
           await loadKnowledge();
-          if (!knowledgeStatus.classList.contains("warning")) {
-            knowledgeStatus.textContent = "学习总结已重新生成。";
+          setKnowledgeStatus("学习总结已重新生成。");
+          if (knowledgeNoteState.photoId === photoId && isKnowledgeNoteOpen()) {
+            renderKnowledgeNote(summary, knowledgeNoteState.item);
           }
         } catch (error) {
-          knowledgeStatus.classList.add("warning");
-          knowledgeStatus.textContent = errorMessage(error, "重新生成学习总结失败。");
+          setKnowledgeStatus(errorMessage(error, "重新生成学习总结失败。"), true);
         } finally {
           button.disabled = false;
           button.textContent = KNOWLEDGE_REBUILD_LABEL;
-          updateKnowledgeRebuildButton();
         }
       }
+
 
       function appendParagraph(parent, text, className = "") {
         const paragraph = document.createElement("p");

@@ -98,12 +98,32 @@ def test_mock_provider_returns_three_complete_styles():
     assert {style.id for style in analysis.recommended_styles} == {
         "natural-documentary",
         "cinematic-teal-warm",
-        "contrast-bw",
+        "soft-film-muted",
     }
+    assert analysis.analysis_version == "photo_analysis_v2"
     assert all(
         style.parameters.schema_version == "editing_parameters_v1"
         for style in analysis.recommended_styles
     )
+
+
+def test_mock_provider_can_opt_into_a_monochrome_style():
+    provider = MockAnalysisProvider(include_monochrome=True)
+    analysis = provider.analyze(
+        Path("unused.jpg"),
+        ImageMetadata(
+            width=1200,
+            height=800,
+            format="JPEG",
+            color_mode="RGB",
+            file_size=4096,
+            content_type="image/jpeg",
+        ),
+    )
+
+    assert len(analysis.recommended_styles) == 3
+    assert analysis.recommended_styles[-1].id == "contrast-bw"
+    assert analysis.recommended_styles[-1].parameters.advanced.black_and_white is True
 
 
 def test_editing_parameters_scale_and_clamp():

@@ -189,7 +189,7 @@ def test_verification_stops_when_target_is_met() -> None:
     target = tone_targets(_ramp())
 
     def observer(parameters: EditingParametersV1) -> ImageMeasurements:
-        return _flat(int(round(target.p50)))
+        return _flat(round(target.p50))
 
     resolution = resolve_parameters(
         measurements=_ramp(),
@@ -283,7 +283,7 @@ def _render_style(
         level = base_level * gain
         level += max(0, parameters.shadows) * shadow_lift
         level += (128.0 - level) * max(0, parameters.contrast) * contrast_gain
-        return _flat(int(round(max(0.0, min(255.0, level)))))
+        return _flat(round(max(0.0, min(255.0, level))))
 
     return observer
 
@@ -431,7 +431,7 @@ def _flat_with_p95(p95: float) -> ImageMeasurements:
     """A frame whose top 5% sits at ``p95`` (rest of the ramp stays mid)."""
 
     size = 100
-    high = int(round(p95))
+    high = round(p95)
     column = [high] * 10 + [110] * 90
     image = Image.new("RGB", (size, len(column)))
     image.putdata([(value, value, value) for _ in range(size) for value in column])

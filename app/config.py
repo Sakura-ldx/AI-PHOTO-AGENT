@@ -6,7 +6,6 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Literal
 
-
 DEFAULT_MAX_UPLOAD_BYTES = 256 * 1024 * 1024
 DEFAULT_MAX_IMAGE_PIXELS = 50_000_000
 DEFAULT_OPENAI_MODEL = "gpt-5.6-terra"

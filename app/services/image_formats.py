@@ -12,7 +12,6 @@ from PIL import Image, ImageOps, UnidentifiedImageError
 
 from app.imaging import flatten_to_rgb
 
-
 ImageFormatName = Literal["JPEG", "PNG", "TIFF", "CR3"]
 RenderSource = Literal["original", "embedded_preview"]
 
