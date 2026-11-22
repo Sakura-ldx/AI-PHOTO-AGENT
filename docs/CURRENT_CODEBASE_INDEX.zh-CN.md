@@ -465,7 +465,7 @@ approximate，不等同于 Camera Raw。
 ```powershell
 # Python 回归（.pytest_cache 在本工作区有 ACL 限制，必须加 -p no:cacheprovider）
 .\.venv\Scripts\python.exe -m pytest tests -q -W error -p no:cacheprovider
-# => 434 passed（26 个测试文件）
+# => 479 passed（32 个测试文件）
 
 # Lightroom 插件静态/运行时校验（package, syntax, json_runtime, bridge_runtime,
 # review_recall, watcher_guard, topmost_helper 全部通过）

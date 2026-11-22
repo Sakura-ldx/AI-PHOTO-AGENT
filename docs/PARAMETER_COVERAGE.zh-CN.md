@@ -91,4 +91,4 @@
   XMP 与显影表都带上新键、`scaled(0)` 回到中性、`to_domain()` 正确折叠 overrides。
 - `tests/test_preview_advanced.py`：黑白云台忽略 HSL/颜色分级、暗角中心不动、颗粒可复现、
   参数曲线只影响对应区间、分通道曲线只影响单通道。
-- `scripts/evaluate_editing.py` 与 `pytest`（当前 290 passed）继续覆盖端到端链路。
+- `scripts/evaluate_editing.py` 与 `pytest`（当前 479 passed）继续覆盖端到端链路。

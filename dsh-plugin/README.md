@@ -160,7 +160,7 @@ $node = "C:\path\to\node.exe"
 - 查看器实现：适应窗口初始值 `scale=1`，范围 1–8；滚轮以鼠标位置为锚点缩放；左键拖动平移并按可视区边界 clamp；双击或「适应窗口」复位；窗口 resize 复位。
 - 仍不恢复 50%/100%/200%/400% 百分比按钮。
 - Client bundle 版本戳更新为 `v2026-10-28.2`。
-- 验证：`node --check`、`scripts/check-client.mjs`（含 wheel/pointer/reset 静态断言）、`check-host`、Python `154 passed`；服务端 bundle 可达并核对版本戳。
+- 验证：`node --check`、`scripts/check-client.mjs`（含 wheel/pointer/reset 静态断言）、`check-host`、Python 全量测试通过；服务端 bundle 可达并核对版本戳。
 - 无浏览器控制，滚轮/拖动手感需用户刷新后人工确认；触摸双指捏合暂不支持。
 
 ### 2026-11-13 安全与生命周期加固
